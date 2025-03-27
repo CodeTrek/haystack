@@ -1,4 +1,4 @@
-package git
+package gitutils
 
 import (
 	"os"
@@ -82,7 +82,7 @@ dir/
 	}
 
 	// 创建规则文件
-	ruleFile, err := newGitIgnoreRuleFile(gitignorePath)
+	ruleFile, err := NewGitIgnoreRules(gitignorePath)
 	if err != nil {
 		t.Fatalf("Failed to create rule file: %v", err)
 	}
@@ -105,7 +105,7 @@ dir/
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fullPath := filepath.Join(tempDir, tt.path)
-			result := ruleFile.isIgnored(fullPath, tt.isDir)
+			result := ruleFile.IsIgnored(fullPath, tt.isDir)
 			if result != tt.expected {
 				t.Errorf("ruleFile.isIgnored(%q) = %v; want %v", tt.path, result, tt.expected)
 			}

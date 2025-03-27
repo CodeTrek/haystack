@@ -1,13 +1,15 @@
-package git
+package fsutils
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"search-indexer/utils/git"
 )
 
 type GitIgnoreFilter struct {
-	ignore *GitIgnore
+	ignore *gitutils.GitIgnore
 }
 
 func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
@@ -91,7 +93,7 @@ ignored_dir/
 	// List files
 	fileInfos, err := ListFiles(tempDir, ListFileOptions{
 		Filter: &GitIgnoreFilter{
-			ignore: NewGitIgnore(tempDir),
+			ignore: gitutils.NewGitIgnore(tempDir),
 		},
 	})
 	if err != nil {

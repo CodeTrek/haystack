@@ -2,31 +2,55 @@ package main
 
 import (
 	"fmt"
-	"search-indexer/helper/git"
+	"search-indexer/utils/fs"
+	"search-indexer/utils/git"
+	"time"
 )
 
 type GitIgnoreFilter struct {
-	ignore *git.GitIgnore
+	ignore *gitutils.GitIgnore
 }
 
 func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
 	return !f.ignore.IsIgnored(path, isDir)
 }
 
-func main() {
-	var done = make(chan []git.FileInfo)
-	go func(done chan []git.FileInfo) {
-		baseDir := "D:\\Edge\\src\\chrome"
+type SimpleFilter struct {
+	ignore *gitutils.GitIgnoreRules
+}
 
-		files, err := git.ListFiles(baseDir, git.ListFileOptions{
+func (f *SimpleFilter) Match(path string, isDir bool) bool {
+	return !f.ignore.IsIgnored(path, isDir)
+}
+
+func main() {
+	fmt.Println(time.Now().Format("2006-01-02 15:04:05:"), "Starting...")
+	var done = make(chan []fsutils.FileInfo)
+	go func(done chan []fsutils.FileInfo) {
+		baseDir := "C:\\Edge\\src\\chrome"
+
+		/*
+			ignoreRules, _ := gitutils.NewGitIgnoreRulesFromString(`
+				.git
+				.gitignore
+				.cache
+			`, baseDir)
+
+			files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{
+				Filter: &SimpleFilter{
+					ignore: ignoreRules,
+				},
+			})
+		*/
+
+		files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{
 			Filter: &GitIgnoreFilter{
-				ignore: git.NewGitIgnore(baseDir),
+				ignore: gitutils.NewGitIgnore(baseDir),
 			},
 		})
-
 		if err != nil {
 			fmt.Println("Error listing files:", err)
-			files = []git.FileInfo{}
+			files = []fsutils.FileInfo{}
 		}
 
 		done <- files
@@ -34,5 +58,5 @@ func main() {
 
 	files := <-done
 
-	fmt.Println(len(files), "files found.")
+	fmt.Println(time.Now().Format("2006-01-02 15:04:05:"), len(files), "files found.")
 }
