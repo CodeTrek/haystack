@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"search-indexer/core/parser"
+	"search-indexer/server/core/parser"
 )
 
 type Document struct {

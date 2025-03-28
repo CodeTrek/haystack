@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 	"path/filepath"
-	"search-indexer/core/document"
+	"search-indexer/server/core/document"
 	"search-indexer/utils"
-	"search-indexer/utils/fs"
-	"search-indexer/utils/git"
+	fsutils "search-indexer/utils/fs"
+	gitutils "search-indexer/utils/git"
 	"time"
 )
 

@@ -1,2 +1,0 @@
-# github.com/bzick/tokenizer v1.4.10
-## explicit; go 1.13
