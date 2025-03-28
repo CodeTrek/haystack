@@ -20,7 +20,7 @@ func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
 }
 
 func demo(shutdown context.Context) {
-	baseDir := "D:\\Edge\\src\\chrome"
+	baseDir := "C:\\Edge\\src\\chrome"
 	log.Println(time.Now().Format("2006-01-02 15:04:05:"), "Indexing:", baseDir)
 
 	files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{

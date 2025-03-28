@@ -30,6 +30,39 @@ func Init() error {
 	return nil
 }
 
+func RootPath() string {
+	return rootPath
+}
+
 func IsServerMode() bool {
 	return *serverMode
+}
+
+func DefaultListenPort() int {
+	return 13134
+}
+
+var serverConf *string
+
+func ServerConf() string {
+	if serverConf == nil {
+		search := []string{
+			"./server.yaml",
+			"./server.sample.yaml",
+			filepath.Join(rootPath, "server.yaml"),
+		}
+
+		for _, path := range search {
+			serverConf = &path
+			if _, err := os.Stat(path); err == nil {
+				break
+			}
+		}
+	}
+
+	return *serverConf
+}
+
+func ClientConf() string {
+	return filepath.Join(rootPath, "client.yaml")
 }
