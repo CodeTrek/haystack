@@ -31,7 +31,7 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 	// Normalize and abs the root path
 	rootPath, err := filepath.Abs(rootPath)
 	if err != nil {
-		return nil, err
+		return []FileInfo{}, err
 	}
 
 	// Initialize result slice
@@ -77,19 +77,11 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 
 			// Handle directories first
 			if entry.IsDir() {
-				if entryName == ".git" {
-					continue
-				}
-
 				// Enqueue this directory for processing
 				queue = append(queue, pathItem{
 					fullPath: entryFullPath,
 					relPath:  entryRelPath,
 				})
-				continue
-			}
-
-			if entryName == ".gitignore" {
 				continue
 			}
 

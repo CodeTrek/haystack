@@ -5,12 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // GitIgnore represents the entire gitignore system
 type GitIgnore struct {
 	rootPath  string
 	ruleFiles map[string]*GitIgnoreRules
+	mutex     sync.RWMutex // 添加互斥锁保护共享数据
 }
 
 // GitIgnoreRules represents a single .gitignore file
@@ -57,6 +59,7 @@ func NewGitIgnore(rootPath string) *GitIgnore {
 	ignorer := &GitIgnore{
 		rootPath:  rootPath,
 		ruleFiles: make(map[string]*GitIgnoreRules),
+		mutex:     sync.RWMutex{},
 	}
 
 	// Load root .gitignore if exists
@@ -91,6 +94,13 @@ func (f *GitIgnoreRules) IsIgnored(path string, isDir bool) bool {
 
 // IsIgnored checks if a path should be ignored by considering all applicable .gitignore rules
 func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
+	baseName := filepath.Base(relPath)
+	if isDir && baseName == ".git" {
+		return true
+	} else if !isDir && baseName == ".gitignore" {
+		return true
+	}
+
 	// Convert the relative path to absolute
 	absPath := filepath.Join(g.rootPath, relPath)
 
@@ -99,16 +109,6 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 	if !isDir {
 		dirPath = filepath.Dir(absPath)
 	}
-
-	/*
-		// Load .gitignore files for all parent directories
-		currPath := dirPath
-		for currPath != g.rootPath && strings.HasPrefix(currPath, g.rootPath) {
-			g.loadGitIgnoreForDir(currPath)
-			currPath = filepath.Dir(currPath)
-		}
-		g.loadGitIgnoreForDir(g.rootPath)
-	*/
 
 	// Prepare list of directories to check, starting from most specific
 	var dirsToCheck []string
@@ -152,13 +152,16 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 
 	// Then check for ignore rules
 	for _, dir := range dirsToCheck {
-		if ruleFile, exists := g.ruleFiles[dir]; exists && ruleFile != nil {
+		g.mutex.RLock()
+		ruleFile, exists := g.ruleFiles[dir]
+		g.mutex.RUnlock()
+
+		if exists && ruleFile != nil {
 			if ruleFile.IsIgnored(absPath, isDir) {
 				return true
 			}
 		}
 	}
-
 	return false
 }
 
@@ -355,6 +358,19 @@ func (f *GitIgnoreRules) isNegated(path string, isDir bool) bool {
 
 // loadGitIgnoreForDir loads .gitignore file for a directory if it exists
 func (g *GitIgnore) loadGitIgnoreForDir(dir string) *GitIgnoreRules {
+	// 使用读锁检查是否已加载
+	g.mutex.RLock()
+	if rf, ok := g.ruleFiles[dir]; ok {
+		g.mutex.RUnlock()
+		return rf
+	}
+	g.mutex.RUnlock()
+
+	// 需要加载，使用写锁
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+
+	// 双重检查，确保在获取锁的过程中没有其他goroutine加载了同一目录
 	if rf, ok := g.ruleFiles[dir]; ok {
 		return rf
 	}
