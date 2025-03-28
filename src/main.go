@@ -1,48 +1,57 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"search-indexer/utils"
-	"search-indexer/utils/fs"
-	"search-indexer/utils/git"
-	"time"
+	"os"
+	"os/signal"
+	"search-indexer/core/parser"
+	"search-indexer/core/storage"
+	"search-indexer/indexer"
+	"search-indexer/searcher"
+	"sync"
+	"syscall"
 )
 
-type GitIgnoreFilter struct {
-	ignore *gitutils.GitIgnore
-}
-
-func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
-	return !f.ignore.IsIgnored(path, isDir)
-}
-
 func main() {
-	fmt.Println(time.Now().Format("2006-01-02 15:04:05:"), "Starting...")
-	var done = make(chan []fsutils.FileInfo)
-	go func(done chan []fsutils.FileInfo) {
-		baseDir := "D:\\Edge\\src\\chrome"
+	fmt.Println("Starting search indexer...")
 
-		files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{
-			Filter: utils.NewSimpleFilterExclude([]string{"node_modules/", "dist/", "build/", "out/", "obj/", ".*"}, baseDir),
-		})
+	if err := storage.Init(); err != nil {
+		fmt.Println("Error initializing storage:", err)
+		return
+	}
 
-		// files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{
-		// 	Filter: &GitIgnoreFilter{
-		// 		ignore: gitutils.NewGitIgnore(baseDir),
-		// 	},
-		// })
+	shutdown, cancel := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
 
-		if err != nil {
-			fmt.Println("Error listing files:", err)
-			files = []fsutils.FileInfo{}
-		}
+	parser.Init()
+	indexer.Run(shutdown, wg)
+	searcher.Run(shutdown, wg)
 
-		done <- files
-	}(done)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	files := <-done
+	/*
+		go func() {
+			for {
+				var input string
+				_, err := fmt.Scanln(&input)
+				if err != nil {
+					if err.Error() == "unexpected newline" {
+						continue
+					}
+					c <- os.Interrupt
+					return
+				}
+				if input == "exit" {
+					c <- os.Interrupt
+					return
+				}
+			}
+		}()
+	*/
 
-	// utils.NewSimpleFilter([]string{"*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"})
-
-	fmt.Println(time.Now().Format("2006-01-02 15:04:05:"), len(files), "files found.")
+	<-c
+	cancel()
+	wg.Wait()
 }

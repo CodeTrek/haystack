@@ -1,14 +1,16 @@
 package fsutils
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 )
 
 // FileInfo holds information about a file with its relative path
 type FileInfo struct {
-	Path string // Relative path from root
-	Size int64  // File size in bytes
+	Path         string // Relative path from root
+	Size         int64  // File size in bytes
+	ModifiedTime int64  // Last modified time in nanoseconds
 }
 
 type ListFileFilter interface {
@@ -17,6 +19,7 @@ type ListFileFilter interface {
 
 type ListFileOptions struct {
 	Filter ListFileFilter
+	ctx    context.Context
 }
 
 // ListFiles lists all regular files in a directory and its subdirectories,
@@ -28,6 +31,15 @@ type ListFileOptions struct {
 //   - []FileInfo: List of non-ignored regular files
 //   - error: Any error encountered during file traversal
 func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if options.ctx != nil {
+		ctx, cancel = context.WithCancel(options.ctx)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+
 	// Normalize and abs the root path
 	rootPath, err := filepath.Abs(rootPath)
 	if err != nil {
@@ -48,6 +60,14 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 
 	// Process the queue in a loop
 	for len(queue) > 0 {
+		select {
+		case <-ctx.Done():
+			// Context was cancelled, stop processing
+			return result, ctx.Err()
+		default:
+			// Continue processing
+		}
+
 		// Dequeue a path
 		current := queue[0]
 		queue = queue[1:]
@@ -94,8 +114,9 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 
 			// Add file to results
 			result = append(result, FileInfo{
-				Path: filepath.ToSlash(entryRelPath),
-				Size: info.Size(),
+				Path:         filepath.ToSlash(entryRelPath),
+				Size:         info.Size(),
+				ModifiedTime: info.ModTime().UnixNano(),
 			})
 		}
 	}

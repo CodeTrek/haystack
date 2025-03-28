@@ -1,5 +1,6 @@
 # Ignore all log files
 *.log
+*.exe
 
 # Ignore build directory
 build/
