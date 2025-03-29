@@ -8,6 +8,11 @@
 #  - $CWD/server.yaml
 #  - $HOME/.search-indexer/server.yaml
 
+default:
+  exclude:
+    use_git_ignore: false
+    customized: ["node_modules/", "dist/", "build/", "out/", "obj/", ".*"]
+  files: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]
 workspaces:
   - name: workspace1
     path: C:\path\to\workspace1

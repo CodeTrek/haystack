@@ -6,16 +6,18 @@ import (
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // DB represents a LevelDB database instance
 type DB struct {
-	db    *leveldb.DB
-	snap  *leveldb.Snapshot // A snapshot of the database to allow concurrent read operations
-	path  string
-	mutex sync.RWMutex
+	path   string
+	db     *leveldb.DB
+	closed bool
+
+	snap        *leveldb.Snapshot // A snapshot of the database to allow concurrent read operations
+	activeSnaps map[*leveldb.Snapshot]int
+	mutex       sync.RWMutex
 }
 
 // TakeSnapshot releases the current snapshot and creates a new one
@@ -23,18 +25,22 @@ func (d *DB) TakeSnapshot() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	// Release the existing snapshot if there is one
-	if d.snap != nil {
-		d.snap.Release()
-		d.snap = nil
+	if d.closed {
+		return fmt.Errorf("database is closed")
 	}
 
 	// Create a new snapshot
-	var err error
-	d.snap, err = d.db.GetSnapshot()
+	snap, err := d.db.GetSnapshot()
 	if err != nil {
 		return fmt.Errorf("failed to create snapshot: %v", err)
 	}
+
+	// Release the current snapshot if it exists
+	d.releaseSnapInternal(d.snap)
+	d.snap = snap
+
+	// Add the new snapshot to the active snapshots map
+	d.activeSnaps[snap] = 1
 
 	return nil
 }
@@ -53,8 +59,11 @@ func OpenDB(path string) (*DB, error) {
 
 	// Create a new DB instance
 	ldb := &DB{
-		db:   db,
-		path: absPath,
+		path:   absPath,
+		db:     db,
+		closed: false,
+
+		activeSnaps: make(map[*leveldb.Snapshot]int),
 	}
 
 	// Create an initial snapshot
@@ -71,11 +80,17 @@ func (d *DB) Close() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	// Release the snapshot if it exists
-	if d.snap != nil {
-		d.snap.Release()
-		d.snap = nil
+	if d.closed {
+		return fmt.Errorf("database is closed")
 	}
+
+	// If there are active snapshots, we cannot close the database
+	if len(d.activeSnaps) > 1 || d.activeSnaps[d.snap] > 1 {
+		return fmt.Errorf("cannot close database with active snapshots")
+	}
+
+	d.releaseSnapInternal(d.snap)
+	d.snap = nil
 
 	if d.db != nil {
 		if err := d.db.Close(); err != nil {
@@ -88,16 +103,37 @@ func (d *DB) Close() error {
 
 // GetSnapshot returns the current snapshot
 // This is useful for advanced operations that need direct access to the snapshot
-func (d *DB) GetSnapshot() *leveldb.Snapshot {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-	return d.snap
+func (d *DB) GetSnapshot() (*Snap, func()) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	if d.closed {
+		return nil, func() {}
+	}
+
+	d.activeSnaps[d.snap]++
+
+	snap := &Snap{
+		db:   d,
+		snap: d.snap,
+	}
+
+	return snap, func() {
+		d.mutex.Lock()
+		defer d.mutex.Unlock()
+		d.releaseSnapInternal(snap.snap)
+		snap.snap = nil
+	}
 }
 
 // Put stores a key-value pair
 func (d *DB) Put(key, value []byte) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
+
+	if d.closed {
+		return fmt.Errorf("database is closed")
+	}
 
 	if err := d.db.Put(key, value, nil); err != nil {
 		return fmt.Errorf("failed to put data: %v", err)
@@ -109,6 +145,10 @@ func (d *DB) Put(key, value []byte) error {
 func (d *DB) Get(key []byte) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
+
+	if d.closed {
+		return nil, fmt.Errorf("database is closed")
+	}
 
 	// Read directly from the DB, not from the snapshot
 	value, err := d.db.Get(key, nil)
@@ -125,6 +165,10 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 func (d *DB) Delete(key []byte) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
+
+	if d.closed {
+		return fmt.Errorf("database is closed")
+	}
 
 	if err := d.db.Delete(key, nil); err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
@@ -144,6 +188,10 @@ func (d *DB) Batch() *Batch {
 func (d *DB) Scan(prefix []byte, limit int) ([][2][]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
+
+	if d.closed {
+		return nil, fmt.Errorf("database is closed")
+	}
 
 	// Always use the DB directly, not the snapshot
 	iter := d.db.NewIterator(util.BytesPrefix(prefix), nil)
@@ -169,37 +217,16 @@ func (d *DB) Scan(prefix []byte, limit int) ([][2][]byte, error) {
 	return results, nil
 }
 
-// Batch represents a batch of operations
-type Batch struct {
-	db    *DB
-	batch *leveldb.Batch
-	mutex sync.Mutex
-}
-
-// Put adds a put operation to the batch
-func (b *Batch) Put(key, value []byte) {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	b.batch.Put(key, value)
-}
-
-// Delete adds a delete operation to the batch
-func (b *Batch) Delete(key []byte) {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	b.batch.Delete(key)
-}
-
-// Write executes the batch operations
-func (b *Batch) Write() error {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	b.db.mutex.Lock()
-	defer b.db.mutex.Unlock()
-
-	if err := b.db.db.Write(b.batch, &opt.WriteOptions{Sync: true}); err != nil {
-		return fmt.Errorf("batch write failed: %v", err)
+func (d *DB) releaseSnapInternal(snap *leveldb.Snapshot) {
+	if snap == nil {
+		return
 	}
-	return nil
+
+	if count, exists := d.activeSnaps[snap]; exists && count > 1 {
+		d.activeSnaps[snap]--
+		return
+	}
+
+	snap.Release()
+	delete(d.activeSnaps, snap)
 }

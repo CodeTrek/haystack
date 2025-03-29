@@ -14,7 +14,7 @@ type Document struct {
 	ModifiedTime int64  `json:"modified_time"`
 	Hash         string `json:"hash"`
 
-	Content Content `json:"content"`
+	Content Content `json:"-"`
 }
 
 func Parse(relPath string, baseDir string) (*Document, error) {

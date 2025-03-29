@@ -19,7 +19,13 @@ type Workspace struct {
 	Files   []string `yaml:"files"`
 }
 
+type Default struct {
+	Exclude Exclude  `yaml:"exclude"`
+	Files   []string `yaml:"files"`
+}
+
 type Conf struct {
+	Default    Default     `yaml:"default"`
 	Workspaces []Workspace `yaml:"workspaces"`
 	Port       int         `yaml:"port"`
 }

@@ -14,6 +14,5 @@ import (
 //     as the value: "kw:<keyword>" -> <document_id>
 
 func Save(docs []*document.Document) error {
-
 	return nil
 }
