@@ -13,7 +13,6 @@ type Exclude struct {
 }
 
 type Workspace struct {
-	Name    string   `yaml:"name"`
 	Path    string   `yaml:"path"`
 	Exclude Exclude  `yaml:"exclude"`
 	Files   []string `yaml:"files"`

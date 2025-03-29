@@ -7,6 +7,8 @@
 #  - $CWD/server.local.yaml
 #  - $CWD/server.yaml
 #  - $HOME/.search-indexer/server.yaml
+#
+# Copy the file to one of the above place.
 
 default:
   exclude:

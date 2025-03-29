@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"search-indexer/server/conf"
 	"search-indexer/server/core/parser"
+	"search-indexer/server/core/storage"
 	"search-indexer/server/indexer"
 	"search-indexer/server/searcher"
 	"sync"
@@ -24,6 +25,11 @@ func Run() {
 
 	shutdown, cancel := context.WithCancel(context.Background())
 	wg := &sync.WaitGroup{}
+
+	if err := storage.Init(); err != nil {
+		log.Fatal("Error initializing storage:", err)
+		return
+	}
 
 	parser.Init()
 	indexer.Run(shutdown, wg)
