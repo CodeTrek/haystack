@@ -1,0 +1,17 @@
+# This is an example of the server configuration file
+# You can copy this file to server.local.yaml and modify it to your own
+# configuration for local development
+# The server will automatically load the configuration from server.local.yaml
+# if it exists.
+# The server will try to load configuration files in the following order:
+#  - $CWD/server.local.yaml
+#  - $CWD/server.yaml
+#  - $HOME/.search-indexer/server.yaml
+
+workspaces:
+  - name: workspace1
+    path: C:\path\to\workspace1
+    exclude:
+      use_git_ignore: false
+      customized: ["node_modules/", "dist/", "build/", "out/", "obj/", ".*"]
+    files: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]

@@ -12,15 +12,16 @@ type Exclude struct {
 	Customized   []string `yaml:"customized"` // Won't be used if enable_git_ignore is true
 }
 
-type Index struct {
+type Workspace struct {
+	Name    string   `yaml:"name"`
 	Path    string   `yaml:"path"`
 	Exclude Exclude  `yaml:"exclude"`
 	Files   []string `yaml:"files"`
 }
 
 type Conf struct {
-	Indexes []Index `yaml:"indexes"`
-	Port    int     `yaml:"port"`
+	Workspaces []Workspace `yaml:"workspaces"`
+	Port       int         `yaml:"port"`
 }
 
 var conf *Conf

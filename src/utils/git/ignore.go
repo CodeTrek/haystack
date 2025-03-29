@@ -12,7 +12,7 @@ import (
 type GitIgnore struct {
 	rootPath  string
 	ruleFiles map[string]*GitIgnoreRules
-	mutex     sync.RWMutex // 添加互斥锁保护共享数据
+	mutex     sync.RWMutex // Mutex to protect shared data
 }
 
 // GitIgnoreRules represents a single .gitignore file
@@ -358,7 +358,7 @@ func (f *GitIgnoreRules) isNegated(path string, isDir bool) bool {
 
 // loadGitIgnoreForDir loads .gitignore file for a directory if it exists
 func (g *GitIgnore) loadGitIgnoreForDir(dir string) *GitIgnoreRules {
-	// 使用读锁检查是否已加载
+	// Use read lock to check if already loaded
 	g.mutex.RLock()
 	if rf, ok := g.ruleFiles[dir]; ok {
 		g.mutex.RUnlock()
@@ -366,11 +366,11 @@ func (g *GitIgnore) loadGitIgnoreForDir(dir string) *GitIgnoreRules {
 	}
 	g.mutex.RUnlock()
 
-	// 需要加载，使用写锁
+	// Need to load, use write lock
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 
-	// 双重检查，确保在获取锁的过程中没有其他goroutine加载了同一目录
+	// Double check to ensure no other goroutine loaded the same directory while acquiring lock
 	if rf, ok := g.ruleFiles[dir]; ok {
 		return rf
 	}
