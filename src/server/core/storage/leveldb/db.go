@@ -13,8 +13,30 @@ import (
 // DB represents a LevelDB database instance
 type DB struct {
 	db    *leveldb.DB
+	snap  *leveldb.Snapshot // A snapshot of the database to allow concurrent read operations
 	path  string
 	mutex sync.RWMutex
+}
+
+// TakeSnapshot releases the current snapshot and creates a new one
+func (d *DB) TakeSnapshot() error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	// Release the existing snapshot if there is one
+	if d.snap != nil {
+		d.snap.Release()
+		d.snap = nil
+	}
+
+	// Create a new snapshot
+	var err error
+	d.snap, err = d.db.GetSnapshot()
+	if err != nil {
+		return fmt.Errorf("failed to create snapshot: %v", err)
+	}
+
+	return nil
 }
 
 // OpenDB opens a LevelDB database at the specified path
@@ -29,16 +51,31 @@ func OpenDB(path string) (*DB, error) {
 		return nil, fmt.Errorf("failed to open leveldb: %v", err)
 	}
 
-	return &DB{
+	// Create a new DB instance
+	ldb := &DB{
 		db:   db,
 		path: absPath,
-	}, nil
+	}
+
+	// Create an initial snapshot
+	if err := ldb.TakeSnapshot(); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return ldb, nil
 }
 
 // Close closes the database
 func (d *DB) Close() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
+
+	// Release the snapshot if it exists
+	if d.snap != nil {
+		d.snap.Release()
+		d.snap = nil
+	}
 
 	if d.db != nil {
 		if err := d.db.Close(); err != nil {
@@ -47,6 +84,14 @@ func (d *DB) Close() error {
 		d.db = nil
 	}
 	return nil
+}
+
+// GetSnapshot returns the current snapshot
+// This is useful for advanced operations that need direct access to the snapshot
+func (d *DB) GetSnapshot() *leveldb.Snapshot {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.snap
 }
 
 // Put stores a key-value pair
@@ -65,6 +110,7 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
+	// Read directly from the DB, not from the snapshot
 	value, err := d.db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
 		return nil, nil
@@ -99,6 +145,7 @@ func (d *DB) Scan(prefix []byte, limit int) ([][2][]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
+	// Always use the DB directly, not the snapshot
 	iter := d.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
 

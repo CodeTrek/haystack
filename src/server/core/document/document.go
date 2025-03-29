@@ -9,13 +9,12 @@ import (
 )
 
 type Document struct {
-	FullPath     string
-	RelPath      string
-	Size         int64
-	ModifiedTime int64  // Last modified time in nanoseconds
-	Hash         string // MD5 hash of the file content
+	FullPath     string `json:"full_path"`
+	Size         int64  `json:"size"`
+	ModifiedTime int64  `json:"modified_time"`
+	Hash         string `json:"hash"`
 
-	Content Content
+	Content Content `json:"content"`
 }
 
 func Parse(relPath string, baseDir string) (*Document, error) {
@@ -33,7 +32,6 @@ func Parse(relPath string, baseDir string) (*Document, error) {
 
 	return &Document{
 		FullPath:     fullPath,
-		RelPath:      relPath,
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),
 		Hash:         fmt.Sprintf("%x", md5.Sum(content)),

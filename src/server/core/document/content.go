@@ -1,5 +1,5 @@
 package document
 
 type Content struct {
-	Words []string
+	Words []string `json:"words"`
 }
