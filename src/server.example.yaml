@@ -10,15 +10,8 @@
 #
 # Copy the file to one of the above place.
 
-default:
+filters:
   exclude:
     use_git_ignore: false
     customized: ["node_modules/", "dist/", "build/", "out/", "obj/", ".*"]
-  files: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]
-workspaces:
-  - name: workspace1
-    path: C:\path\to\workspace1
-    exclude:
-      use_git_ignore: false
-      customized: ["node_modules/", "dist/", "build/", "out/", "obj/", ".*"]
-    files: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]
+  include: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]

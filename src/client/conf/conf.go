@@ -1,11 +1,11 @@
 package conf
 
 import (
-	"search-indexer/runtime"
+	"search-indexer/running"
 )
 
 func checkMode() {
-	if runtime.IsServerMode() {
+	if running.IsServerMode() {
 		panic("client conf is not accessible in server mode!")
 	}
 }

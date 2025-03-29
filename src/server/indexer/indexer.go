@@ -1,24 +1,24 @@
 package indexer
 
 import (
-	"context"
 	"fmt"
+	"search-indexer/running"
 	"sync"
 )
 
 type Indexer struct {
 }
 
-func Run(shutdown context.Context, wg *sync.WaitGroup) {
+func Run(wg *sync.WaitGroup) {
 	fmt.Println("Starting indexer...")
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		indexerMain(shutdown)
-		<-shutdown.Done()
+		indexerMain()
+		running.WaitingForShutdown()
 	}()
 }
 
-func indexerMain(shutdown context.Context) {
-	demo(shutdown)
+func indexerMain() {
+	demo()
 }

@@ -1,7 +1,9 @@
 package conf
 
 import (
-	"search-indexer/runtime"
+	"os"
+	"path/filepath"
+	"search-indexer/running"
 	fsutils "search-indexer/utils/fs"
 
 	"gopkg.in/yaml.v3"
@@ -12,27 +14,24 @@ type Exclude struct {
 	Customized   []string `yaml:"customized"` // Won't be used if enable_git_ignore is true
 }
 
-type Workspace struct {
-	Path    string   `yaml:"path"`
+type Filters struct {
 	Exclude Exclude  `yaml:"exclude"`
-	Files   []string `yaml:"files"`
-}
-
-type Default struct {
-	Exclude Exclude  `yaml:"exclude"`
-	Files   []string `yaml:"files"`
+	Include []string `yaml:"include"`
 }
 
 type Conf struct {
-	Default    Default     `yaml:"default"`
-	Workspaces []Workspace `yaml:"workspaces"`
-	Port       int         `yaml:"port"`
+	ForTest struct {
+		Path string `yaml:"path"`
+	} `yaml:"for_test"`
+
+	Filters Filters `yaml:"filters"`
+	Port    int     `yaml:"port"`
 }
 
 var conf *Conf
 
 func checkMode() {
-	if !runtime.IsServerMode() {
+	if !running.IsServerMode() {
 		panic("server conf is not accessible in client mode!")
 	}
 }
@@ -42,14 +41,29 @@ func Get() *Conf {
 	return conf
 }
 
+var serverConf *string
+
 func Load() error {
 	checkMode()
 
-	conf = &Conf{
-		Port: runtime.DefaultListenPort(),
+	search := []string{
+		"./server.local.yaml",
+		"./server.yaml",
+		filepath.Join(running.RootPath(), "server.yaml"),
 	}
 
-	confBytes := fsutils.ReadFileWithDefault(runtime.ServerConf(), []byte(``))
+	for _, path := range search {
+		serverConf = &path
+		if _, err := os.Stat(path); err == nil {
+			break
+		}
+	}
+
+	conf = &Conf{
+		Port: running.DefaultListenPort(),
+	}
+
+	confBytes := fsutils.ReadFileWithDefault(*serverConf, []byte(``))
 	if err := yaml.Unmarshal(confBytes, conf); err != nil {
 		return err
 	}

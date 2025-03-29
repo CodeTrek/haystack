@@ -9,12 +9,13 @@ import (
 )
 
 type Document struct {
+	ID           string `json:"-"`
 	FullPath     string `json:"full_path"`
 	Size         int64  `json:"size"`
 	ModifiedTime int64  `json:"modified_time"`
 	Hash         string `json:"hash"`
 
-	Content Content `json:"-"`
+	Content Content `json:"content"`
 }
 
 func Parse(relPath string, baseDir string) (*Document, error) {
@@ -31,6 +32,7 @@ func Parse(relPath string, baseDir string) (*Document, error) {
 	}
 
 	return &Document{
+		ID:           fmt.Sprintf("%x", md5.Sum([]byte(fullPath))),
 		FullPath:     fullPath,
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),

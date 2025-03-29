@@ -20,31 +20,6 @@ type DB struct {
 	mutex       sync.RWMutex
 }
 
-// TakeSnapshot releases the current snapshot and creates a new one
-func (d *DB) TakeSnapshot() error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if d.closed {
-		return fmt.Errorf("database is closed")
-	}
-
-	// Create a new snapshot
-	snap, err := d.db.GetSnapshot()
-	if err != nil {
-		return fmt.Errorf("failed to create snapshot: %v", err)
-	}
-
-	// Release the current snapshot if it exists
-	d.releaseSnapInternal(d.snap)
-	d.snap = snap
-
-	// Add the new snapshot to the active snapshots map
-	d.activeSnaps[snap] = 1
-
-	return nil
-}
-
 // OpenDB opens a LevelDB database at the specified path
 func OpenDB(path string) (*DB, error) {
 	absPath, err := filepath.Abs(path)
@@ -86,11 +61,12 @@ func (d *DB) Close() error {
 
 	// If there are active snapshots, we cannot close the database
 	if len(d.activeSnaps) > 1 || d.activeSnaps[d.snap] > 1 {
-		return fmt.Errorf("cannot close database with active snapshots")
+		return fmt.Errorf("cannot close database with %d active snapshots", len(d.activeSnaps))
 	}
 
 	d.releaseSnapInternal(d.snap)
 	d.snap = nil
+	d.closed = true
 
 	if d.db != nil {
 		if err := d.db.Close(); err != nil {
@@ -98,6 +74,37 @@ func (d *DB) Close() error {
 		}
 		d.db = nil
 	}
+	return nil
+}
+
+func (d *DB) IsClosed() bool {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.closed
+}
+
+// TakeSnapshot releases the current snapshot and creates a new one
+func (d *DB) TakeSnapshot() error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	if d.closed {
+		return fmt.Errorf("database is closed")
+	}
+
+	// Create a new snapshot
+	snap, err := d.db.GetSnapshot()
+	if err != nil {
+		return fmt.Errorf("failed to create snapshot: %v", err)
+	}
+
+	// Release the current snapshot if it exists
+	d.releaseSnapInternal(d.snap)
+	d.snap = snap
+
+	// Add the new snapshot to the active snapshots map
+	d.activeSnaps[snap] = 1
+
 	return nil
 }
 

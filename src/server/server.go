@@ -1,11 +1,11 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"search-indexer/running"
 	"search-indexer/server/conf"
 	"search-indexer/server/core/parser"
 	"search-indexer/server/core/storage"
@@ -23,40 +23,20 @@ func Run() {
 		return
 	}
 
-	shutdown, cancel := context.WithCancel(context.Background())
+	cancel, _ := running.InitShutdown()
 	wg := &sync.WaitGroup{}
 
-	if err := storage.Init(); err != nil {
+	if err := storage.Init(wg); err != nil {
 		log.Fatal("Error initializing storage:", err)
 		return
 	}
 
 	parser.Init()
-	indexer.Run(shutdown, wg)
-	searcher.Run(shutdown, wg)
+	indexer.Run(wg)
+	searcher.Run(wg)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	/*
-		go func() {
-			for {
-				var input string
-				_, err := fmt.Scanln(&input)
-				if err != nil {
-					if err.Error() == "unexpected newline" {
-						continue
-					}
-					c <- os.Interrupt
-					return
-				}
-				if input == "exit" {
-					c <- os.Interrupt
-					return
-				}
-			}
-		}()
-	*/
 
 	<-c
 	cancel()
