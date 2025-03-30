@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"search-indexer/utils/git"
+	gitutils "search-indexer/utils/git"
 )
 
 type GitIgnoreFilter struct {
@@ -91,11 +91,16 @@ ignored_dir/
 	}
 
 	// List files
-	fileInfos, err := ListFiles(tempDir, ListFileOptions{
+	fileInfos := []FileInfo{}
+	err = ListFiles(tempDir, ListFileOptions{
 		Filter: &GitIgnoreFilter{
 			ignore: gitutils.NewGitIgnore(tempDir),
 		},
+	}, func(fileInfo FileInfo) bool {
+		fileInfos = append(fileInfos, fileInfo)
+		return true
 	})
+
 	if err != nil {
 		t.Fatalf("ListFiles failed: %v", err)
 	}

@@ -30,7 +30,7 @@ type ListFileOptions struct {
 // Returns:
 //   - []FileInfo: List of non-ignored regular files
 //   - error: Any error encountered during file traversal
-func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
+func ListFiles(rootPath string, options ListFileOptions, cb func(fileInfo FileInfo) bool) error {
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if options.ctx != nil {
@@ -43,11 +43,8 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 	// Normalize and abs the root path
 	rootPath, err := filepath.Abs(rootPath)
 	if err != nil {
-		return []FileInfo{}, err
+		return err
 	}
-
-	// Initialize result slice
-	var result []FileInfo
 
 	// Use a queue-based approach instead of recursion
 	type pathItem struct {
@@ -63,7 +60,7 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 		select {
 		case <-ctx.Done():
 			// Context was cancelled, stop processing
-			return result, ctx.Err()
+			return ctx.Err()
 		default:
 			// Continue processing
 		}
@@ -112,14 +109,17 @@ func ListFiles(rootPath string, options ListFileOptions) ([]FileInfo, error) {
 				continue
 			}
 
-			// Add file to results
-			result = append(result, FileInfo{
+			fileInfo := FileInfo{
 				Path:         filepath.ToSlash(entryRelPath),
 				Size:         info.Size(),
 				ModifiedTime: info.ModTime().UnixNano(),
-			})
+			}
+
+			if continueScan := cb(fileInfo); !continueScan {
+				return nil
+			}
 		}
 	}
 
-	return result, nil
+	return nil
 }

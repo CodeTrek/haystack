@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"search-indexer/server/core/document"
+
 	"strings"
 )
 
@@ -13,53 +13,71 @@ const (
 	KeywordPrefix   = "kw:"
 )
 
+func KEncodeWorkspace(workspaceid string) []byte {
+	return []byte(fmt.Sprintf("%s%s", WorkspacePrefix, workspaceid))
+}
+
+func KDecodeWorkspace(key string) string {
+	if !strings.HasPrefix(key, WorkspacePrefix) {
+		return ""
+	}
+
+	key = strings.TrimPrefix(key, WorkspacePrefix)
+
+	return key
+}
+
 func KEncodeDocument(workspaceid string, docid string) []byte {
-	return []byte(fmt.Sprintf("%s%s,%s%s", WorkspacePrefix, workspaceid, DocPrefix, docid))
+	return []byte(fmt.Sprintf("%s%s|%s", DocPrefix, workspaceid, docid))
 }
 
 func KDecodeDocument(key string) (string, string) {
-	parts := strings.Split(key, ",")
+	if !strings.HasPrefix(key, DocPrefix) {
+		return "", ""
+	}
+
+	key = strings.TrimPrefix(key, DocPrefix)
+
+	parts := strings.Split(key, "|")
 	if len(parts) != 2 {
 		return "", ""
 	}
 
-	if !strings.HasPrefix(parts[0], WorkspacePrefix) || !strings.HasPrefix(parts[1], DocPrefix) {
-		return "", ""
-	}
+	workspaceid := parts[0]
+	docid := parts[1]
 
-	workspaceid := strings.TrimPrefix(parts[0], WorkspacePrefix)
-	docid := strings.TrimPrefix(parts[1], DocPrefix)
 	return workspaceid, docid
 }
 
 func KEncodeKeyword(workspaceid string, keyword string, docid string) []byte {
-	return []byte(fmt.Sprintf("%s%s,%s%s,%s%s", WorkspacePrefix, workspaceid, KeywordPrefix, keyword, DocPrefix, docid))
+	return []byte(fmt.Sprintf("%s%s|%s|%s", KeywordPrefix, workspaceid, keyword, docid))
 }
 
 func KDecodeKeyword(key string) (string, string, string) {
-	parts := strings.Split(key, ",")
+	if !strings.HasPrefix(key, KeywordPrefix) {
+		return "", "", ""
+	}
+
+	key = strings.TrimPrefix(key, KeywordPrefix)
+
+	parts := strings.Split(key, "|")
 	if len(parts) != 3 {
 		return "", "", ""
 	}
 
-	if !strings.HasPrefix(parts[0], WorkspacePrefix) ||
-		!strings.HasPrefix(parts[1], KeywordPrefix) ||
-		!strings.HasPrefix(parts[2], DocPrefix) {
-		return "", "", ""
-	}
+	workspaceid := parts[0]
+	keyword := parts[1]
+	docid := parts[2]
 
-	workspaceid := strings.TrimPrefix(parts[0], WorkspacePrefix)
-	keyword := strings.TrimPrefix(parts[1], KeywordPrefix)
-	docid := strings.TrimPrefix(parts[2], DocPrefix)
 	return workspaceid, keyword, docid
 }
 
-func VEncodeDocument(doc *document.Document) ([]byte, error) {
+func VEncodeDocument(doc *Document) ([]byte, error) {
 	return json.Marshal(doc)
 }
 
-func VDecodeDocument(data []byte) (*document.Document, error) {
-	doc := document.Document{}
+func VDecodeDocument(data []byte) (*Document, error) {
+	doc := Document{}
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, err
 	}

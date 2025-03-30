@@ -123,7 +123,12 @@ func TestScan(t *testing.T) {
 	}
 
 	// Test scanning with prefix
-	results, err := db.Scan(prefix, 0)
+	results := [][]byte{}
+	err = db.Scan(prefix, func(key, value []byte) bool {
+		results = append(results, key)
+		return true
+	})
+
 	if err != nil {
 		t.Fatalf("Failed to scan: %v", err)
 	}
@@ -145,16 +150,5 @@ func TestScan(t *testing.T) {
 		if value != expectedValue {
 			t.Errorf("Expected value %q for key %q, got %q", expectedValue, key, value)
 		}
-	}
-
-	// Test scanning with limit
-	limit := 2
-	results, err = db.Scan(prefix, limit)
-	if err != nil {
-		t.Fatalf("Failed to scan with limit: %v", err)
-	}
-
-	if len(results) != limit {
-		t.Errorf("Expected %d results with limit, got %d", limit, len(results))
 	}
 }

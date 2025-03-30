@@ -22,8 +22,8 @@ func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
 }
 
 func demo() {
-	conf := conf.Get()
-	baseDir := conf.ForTest.Path
+	conf := conf.Get().ForTest
+	baseDir := conf.Path
 	if baseDir == "" {
 		log.Println("ForTest.Path is not set")
 		return
@@ -41,9 +41,10 @@ func demo() {
 		log.Println("Using customized filter")
 		filter = utils.NewSimpleFilterExclude(conf.Filters.Exclude.Customized, baseDir)
 	}
-
-	files, err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{
-		Filter: utils.NewSimpleFilterExclude(conf.Filters.Exclude.Customized, baseDir),
+	var files []fsutils.FileInfo
+	err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: filter}, func(fileInfo fsutils.FileInfo) bool {
+		files = append(files, fileInfo)
+		return true
 	})
 
 	if err != nil {
@@ -72,7 +73,7 @@ func demo() {
 	faied := 0
 	last := time.Now()
 	wordCount := 0
-	docs := []*document.Document{}
+	docs := []*storage.Document{}
 	for n, file := range filteredFiles {
 		if running.IsShuttingDown() {
 			return
@@ -83,12 +84,12 @@ func demo() {
 			faied++
 		} else {
 			succ++
-			wordCount += len(doc.Content.Words)
+			wordCount += len(doc.Doc.Words)
 		}
-		docs = append(docs, doc)
+		docs = append(docs, &doc.Doc)
 		if len(docs) >= 100 {
-			storage.Save(docs, "0")
-			docs = []*document.Document{}
+			storage.SaveDocuments("0", docs)
+			docs = []*storage.Document{}
 		}
 
 		if time.Since(last) > 1000*time.Millisecond || n == len(filteredFiles)-1 {
@@ -98,7 +99,7 @@ func demo() {
 	}
 
 	if len(docs) > 0 {
-		storage.Save(docs, "0")
+		storage.SaveDocuments("0", docs)
 	}
 
 	log.Println(len(filteredFiles), "parsed files, succ:", succ, "failed:", faied, "wordCount:", wordCount)

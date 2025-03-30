@@ -196,36 +196,24 @@ func (d *DB) Batch() *Batch {
 }
 
 // Scan performs a range scan over the database
-func (d *DB) Scan(prefix []byte, limit int) ([][2][]byte, error) {
+func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	if d.closed {
-		return nil, fmt.Errorf("database is closed")
+		return fmt.Errorf("database is closed")
 	}
 
 	// Always use the DB directly, not the snapshot
 	iter := d.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iter.Release()
 
-	var results [][2][]byte
 	for iter.Next() {
-		if limit > 0 && len(results) >= limit {
+		if continueScan := cb(iter.Key(), iter.Value()); !continueScan {
 			break
 		}
-
-		key := make([]byte, len(iter.Key()))
-		value := make([]byte, len(iter.Value()))
-		copy(key, iter.Key())
-		copy(value, iter.Value())
-		results = append(results, [2][]byte{key, value})
 	}
-
-	if err := iter.Error(); err != nil {
-		return nil, fmt.Errorf("scan failed: %v", err)
-	}
-
-	return results, nil
+	return nil
 }
 
 func (d *DB) releaseSnapInternal(snap *leveldb.Snapshot) {

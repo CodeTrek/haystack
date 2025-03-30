@@ -3,16 +3,14 @@ package server
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 	"search-indexer/running"
 	"search-indexer/server/conf"
 	"search-indexer/server/core/parser"
 	"search-indexer/server/core/storage"
+	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"
 	"search-indexer/server/searcher"
 	"sync"
-	"syscall"
 )
 
 func Run() {
@@ -23,11 +21,18 @@ func Run() {
 		return
 	}
 
-	cancel, _ := running.InitShutdown()
 	wg := &sync.WaitGroup{}
+	running.InitShutdown(wg)
 
 	if err := storage.Init(wg); err != nil {
 		log.Fatal("Error initializing storage:", err)
+		running.Shutdown()
+		return
+	}
+
+	if err := workspace.Init(wg); err != nil {
+		log.Fatal("Error initializing workspace:", err)
+		running.Shutdown()
 		return
 	}
 
@@ -35,10 +40,9 @@ func Run() {
 	indexer.Run(wg)
 	searcher.Run(wg)
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	if conf.Get().ForTest.Path != "" {
+		indexer.SyncIfNeeded(conf.Get().ForTest.Path)
+	}
 
-	<-c
-	cancel()
 	wg.Wait()
 }

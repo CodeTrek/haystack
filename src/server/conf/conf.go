@@ -10,18 +10,19 @@ import (
 )
 
 type Exclude struct {
-	UseGitIgnore bool     `yaml:"use_git_ignore"`
-	Customized   []string `yaml:"customized"` // Won't be used if enable_git_ignore is true
+	UseGitIgnore bool     `yaml:"use_git_ignore" json:"use_git_ignore"`
+	Customized   []string `yaml:"customized" json:"customized"` // Won't be used if enable_git_ignore is true
 }
 
 type Filters struct {
-	Exclude Exclude  `yaml:"exclude"`
-	Include []string `yaml:"include"`
+	Exclude Exclude  `yaml:"exclude" json:"exclude"`
+	Include []string `yaml:"include" optional:"true" json:"include"`
 }
 
 type Conf struct {
 	ForTest struct {
-		Path string `yaml:"path"`
+		Path    string  `yaml:"path"`
+		Filters Filters `yaml:"filters"`
 	} `yaml:"for_test"`
 
 	Filters Filters `yaml:"filters"`

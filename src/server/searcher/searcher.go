@@ -2,6 +2,7 @@ package searcher
 
 import (
 	"fmt"
+	"log"
 	"search-indexer/running"
 	"sync"
 )
@@ -13,5 +14,6 @@ func Run(wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 		running.WaitingForShutdown()
+		log.Println("Searcher shutdown.")
 	}()
 }
