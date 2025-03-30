@@ -8,7 +8,11 @@ import (
 type Parser struct {
 }
 
-func (p *Parser) start(wg *sync.WaitGroup) {
+func NewParser() *Parser {
+	return &Parser{}
+}
+
+func (p *Parser) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go p.run(wg)
 }

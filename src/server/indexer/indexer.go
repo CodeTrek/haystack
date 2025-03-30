@@ -2,34 +2,43 @@ package indexer
 
 import (
 	"fmt"
-	"log"
 	"search-indexer/server/core/workspace"
 	"sync"
 	"time"
 )
 
-var scanner Scanner
-var parser Parser
-var writer Writer
+var (
+	scanner = NewScanner()
+	parser  = NewParser()
+	writer  = NewWriter()
+)
 
+// Run starts the indexer components in separate goroutines.
 func Run(wg *sync.WaitGroup) {
 	fmt.Println("Starting indexer...")
 
-	scanner.start(wg)
-	parser.start(wg)
-	writer.start(wg)
+	scanner.Start(wg)
+	parser.Start(wg)
+	writer.Start(wg)
 
 	fmt.Println("Indexer started.")
 }
 
-func SyncIfNeeded(path string) {
+// SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
+// A workspace needs to be synced if:
+// 1. It has never been synced (LastFullSync is zero)
+// 2. It was last synced more than 24 hours ago
+func SyncIfNeeded(path string) error {
 	workspace, err := workspace.GetOrCreate(path)
 	if err != nil {
-		log.Fatalf("Failed to get or create workspace: %v", err)
+		return fmt.Errorf("failed to get or create workspace: %v", err)
 	}
 
 	if workspace.Meta.LastFullSync.IsZero() ||
 		workspace.Meta.LastFullSync.Before(time.Now().Add(-time.Hour*24)) {
-		scanner.add(workspace)
+		if err := scanner.Add(workspace); err != nil {
+			return fmt.Errorf("failed to add workspace to scanner queue: %v", err)
+		}
 	}
+	return nil
 }

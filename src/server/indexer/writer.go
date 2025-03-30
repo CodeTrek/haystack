@@ -8,7 +8,11 @@ import (
 type Writer struct {
 }
 
-func (w *Writer) start(wg *sync.WaitGroup) {
+func NewWriter() *Writer {
+	return &Writer{}
+}
+
+func (w *Writer) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go w.run(wg)
 }

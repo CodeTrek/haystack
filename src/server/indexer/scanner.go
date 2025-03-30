@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"container/list"
+	"context"
+	"fmt"
 	"log"
 	"search-indexer/running"
 	"search-indexer/server/core/workspace"
@@ -12,40 +14,58 @@ import (
 	"time"
 )
 
+// Scanner represents a file system scanner that processes workspaces in a queue.
+// It is responsible for scanning files in workspaces and applying appropriate filters.
 type Scanner struct {
 	current *workspace.Workspace
 	queue   *list.List
-
-	mutex sync.Mutex
+	mu      sync.RWMutex
 }
 
-func (s *Scanner) start(wg *sync.WaitGroup) {
+// NewScanner creates a new Scanner instance.
+func NewScanner() *Scanner {
+	return &Scanner{
+		queue: list.New(),
+	}
+}
+
+// Start begins the scanning process in a goroutine.
+// It will continue running until the application is shutting down.
+func (s *Scanner) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
-	s.queue = list.New()
 	go s.run(wg)
 }
 
+// run is the main scanning loop that processes workspaces from the queue.
 func (s *Scanner) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	ctx := context.Background()
 	for !running.IsShuttingDown() {
 		workspace := s.tryPopJob()
 		if workspace == nil {
-			time.Sleep(500 * time.Millisecond)
-			continue
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(500 * time.Millisecond):
+				continue
+			}
 		}
 
 		s.setCurrent(workspace)
-		s.scan(workspace)
+		if err := s.scan(workspace); err != nil {
+			log.Printf("Error scanning workspace %s: %v", workspace.Meta.Path, err)
+		}
 		s.setCurrent(nil)
 	}
 
 	log.Println("Scanner stopped")
 }
 
-func (s *Scanner) scan(current *workspace.Workspace) {
-	baseDir := current.Meta.Path
-	filters := current.GetFilters()
+// scan processes a single workspace by scanning its files and applying filters.
+func (s *Scanner) scan(w *workspace.Workspace) error {
+	baseDir := w.Meta.Path
+	filters := w.GetFilters()
 
 	var filter fsutils.ListFileFilter
 	if filters.Exclude.UseGitIgnore {
@@ -56,15 +76,18 @@ func (s *Scanner) scan(current *workspace.Workspace) {
 		filter = utils.NewSimpleFilterExclude(filters.Exclude.Customized, baseDir)
 	}
 
-	fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: filter}, func(fileInfo fsutils.FileInfo) bool {
+	return fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: filter}, func(fileInfo fsutils.FileInfo) bool {
 		log.Println(fileInfo.Path)
 		return !running.IsShuttingDown()
 	})
 }
 
+// tryPopJob attempts to remove and return the next workspace from the queue.
+// Returns nil if the queue is empty.
 func (s *Scanner) tryPopJob() *workspace.Workspace {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.queue.Len() > 0 {
 		job := s.queue.Remove(s.queue.Front())
 		return job.(*workspace.Workspace)
@@ -72,16 +95,21 @@ func (s *Scanner) tryPopJob() *workspace.Workspace {
 	return nil
 }
 
-func (s *Scanner) setCurrent(workspace *workspace.Workspace) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.current = workspace
+// setCurrent updates the current workspace being processed.
+func (s *Scanner) setCurrent(w *workspace.Workspace) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.current = w
 }
 
-func (s *Scanner) add(workspace *workspace.Workspace) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+// Add adds a workspace to the scanning queue.
+func (s *Scanner) Add(w *workspace.Workspace) error {
+	if w == nil {
+		return fmt.Errorf("cannot add nil workspace to scanner queue")
+	}
 
-	s.queue.PushBack(workspace)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.queue.PushBack(w)
+	return nil
 }
