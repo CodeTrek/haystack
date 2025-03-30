@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"container/list"
-	"context"
 	"fmt"
 	"log"
 	"search-indexer/running"
@@ -39,13 +38,13 @@ func (s *Scanner) Start(wg *sync.WaitGroup) {
 // run is the main scanning loop that processes workspaces from the queue.
 func (s *Scanner) run(wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer log.Println("Scanner stopped")
 
-	ctx := context.Background()
 	for !running.IsShuttingDown() {
 		workspace := s.tryPopJob()
 		if workspace == nil {
 			select {
-			case <-ctx.Done():
+			case <-running.GetShutdown().Done():
 				return
 			case <-time.After(500 * time.Millisecond):
 				continue
@@ -58,8 +57,6 @@ func (s *Scanner) run(wg *sync.WaitGroup) {
 		}
 		s.setCurrent(nil)
 	}
-
-	log.Println("Scanner stopped")
 }
 
 // scan processes a single workspace by scanning its files and applying filters.
@@ -77,7 +74,7 @@ func (s *Scanner) scan(w *workspace.Workspace) error {
 	}
 
 	return fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: filter}, func(fileInfo fsutils.FileInfo) bool {
-		log.Println(fileInfo.Path)
+		parser.Add(w, fileInfo.Path)
 		return !running.IsShuttingDown()
 	})
 }

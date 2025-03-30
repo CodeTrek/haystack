@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"search-indexer/running"
 	"search-indexer/server/conf"
-	"search-indexer/server/core/document"
 	"search-indexer/server/core/storage"
 	"search-indexer/utils"
 	fsutils "search-indexer/utils/fs"
@@ -79,14 +78,14 @@ func demo() {
 			return
 		}
 
-		doc, err := document.Parse(file, baseDir)
+		doc, err := parse(file, baseDir)
 		if err != nil {
 			faied++
 		} else {
 			succ++
-			wordCount += len(doc.Doc.Words)
+			wordCount += len(doc.Words)
 		}
-		docs = append(docs, &doc.Doc)
+		docs = append(docs, doc)
 		if len(docs) >= 100 {
 			storage.SaveDocuments("0", docs)
 			docs = []*storage.Document{}

@@ -3,6 +3,7 @@ package conf
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"search-indexer/running"
 	fsutils "search-indexer/utils/fs"
 
@@ -25,8 +26,9 @@ type Conf struct {
 		Filters Filters `yaml:"filters"`
 	} `yaml:"for_test"`
 
-	Filters Filters `yaml:"filters"`
-	Port    int     `yaml:"port"`
+	Filters      Filters `yaml:"filters"`
+	IndexWorkers int     `yaml:"index_workers"`
+	Port         int     `yaml:"port"`
 }
 
 var conf *Conf
@@ -61,12 +63,17 @@ func Load() error {
 	}
 
 	conf = &Conf{
-		Port: running.DefaultListenPort(),
+		Port:         running.DefaultListenPort(),
+		IndexWorkers: running.DefaultIndexWorkers(),
 	}
 
 	confBytes := fsutils.ReadFileWithDefault(*serverConf, []byte(``))
 	if err := yaml.Unmarshal(confBytes, conf); err != nil {
 		return err
+	}
+
+	if conf.IndexWorkers <= 0 || conf.IndexWorkers > runtime.NumCPU() {
+		conf.IndexWorkers = runtime.NumCPU()
 	}
 
 	return nil

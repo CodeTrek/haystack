@@ -5,7 +5,6 @@ import (
 	"log"
 	"search-indexer/running"
 	"search-indexer/server/conf"
-	"search-indexer/server/core/parser"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"
@@ -36,7 +35,6 @@ func Run() {
 		return
 	}
 
-	parser.Init()
 	indexer.Run(wg)
 	searcher.Run(wg)
 
