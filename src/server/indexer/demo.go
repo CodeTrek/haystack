@@ -86,12 +86,12 @@ func demo() {
 			wordCount += len(doc.Content.Words)
 		}
 		docs = append(docs, doc)
-		if len(docs) > 100 {
+		if len(docs) >= 100 {
 			storage.Save(docs, "0")
 			docs = []*document.Document{}
 		}
 
-		if time.Since(last) > 200*time.Millisecond || n == len(filteredFiles)-1 {
+		if time.Since(last) > 1000*time.Millisecond || n == len(filteredFiles)-1 {
 			last = time.Now()
 			log.Printf("Parsing progress %d / %d, succ: %d, failed, %d, wordCount: %d", n+1, len(filteredFiles), succ, faied, wordCount)
 		}

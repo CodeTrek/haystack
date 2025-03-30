@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -27,7 +28,10 @@ func OpenDB(path string) (*DB, error) {
 		return nil, fmt.Errorf("failed to get absolute path: %v", err)
 	}
 
-	db, err := leveldb.OpenFile(absPath, nil)
+	db, err := leveldb.OpenFile(absPath, &opt.Options{
+		Compression: opt.SnappyCompression,
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to open leveldb: %v", err)
 	}

@@ -75,12 +75,15 @@ func Save(docs []*document.Document, workspaceid string) error {
 	batch := db.Batch()
 
 	for _, doc := range docs {
-		v, err := EncodeDocument(doc)
+		v, err := VEncodeDocument(doc)
 		if err != nil {
 			return err
 		}
 
-		batch.Put(EncodeKey(workspaceid, doc.ID), v)
+		batch.Put(KEncodeDocument(workspaceid, doc.ID), v)
+		for _, kw := range doc.Content.Words {
+			batch.Put(KEncodeKeyword(workspaceid, kw, doc.ID), []byte("1"))
+		}
 	}
 
 	if err := batch.Write(); err != nil {
