@@ -19,7 +19,7 @@ type Meta struct {
 
 	CreatedAt    time.Time `json:"created_time"`
 	LastAccessed time.Time `json:"last_accessed_time"`
-	LastFullSync time.Time `json:"last_full_sync_time" optional:"true"`
+	LastFullSync time.Time `json:"last_full_sync_time"`
 }
 
 type Workspace struct {

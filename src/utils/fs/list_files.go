@@ -1,7 +1,6 @@
 package fsutils
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 )
@@ -19,7 +18,6 @@ type ListFileFilter interface {
 
 type ListFileOptions struct {
 	Filter ListFileFilter
-	ctx    context.Context
 }
 
 // ListFiles lists all regular files in a directory and its subdirectories,
@@ -31,15 +29,6 @@ type ListFileOptions struct {
 //   - []FileInfo: List of non-ignored regular files
 //   - error: Any error encountered during file traversal
 func ListFiles(rootPath string, options ListFileOptions, cb func(fileInfo FileInfo) bool) error {
-	var ctx context.Context
-	var cancel context.CancelFunc
-	if options.ctx != nil {
-		ctx, cancel = context.WithCancel(options.ctx)
-	} else {
-		ctx, cancel = context.WithCancel(context.Background())
-	}
-	defer cancel()
-
 	// Normalize and abs the root path
 	rootPath, err := filepath.Abs(rootPath)
 	if err != nil {
@@ -57,14 +46,6 @@ func ListFiles(rootPath string, options ListFileOptions, cb func(fileInfo FileIn
 
 	// Process the queue in a loop
 	for len(queue) > 0 {
-		select {
-		case <-ctx.Done():
-			// Context was cancelled, stop processing
-			return ctx.Err()
-		default:
-			// Continue processing
-		}
-
 		// Dequeue a path
 		current := queue[0]
 		queue = queue[1:]

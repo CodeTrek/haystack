@@ -15,7 +15,9 @@ var db *leveldb.DB
 
 const StorageVersion = "1.0"
 
-func Init(wg *sync.WaitGroup) error {
+var closeOnce sync.Once
+
+func Init() error {
 	dataPath := filepath.Join(running.RootPath(), "data")
 	dbPath := filepath.Join(dataPath, "leveldb")
 	versionPath := filepath.Join(dataPath, "version")
@@ -29,29 +31,30 @@ func Init(wg *sync.WaitGroup) error {
 		return err
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		running.WaitingForShutdown()
+	return nil
+}
+
+func CloseAndWait() {
+	closeOnce.Do(func() {
 		log.Println("Closing storage...")
+		defer log.Println("Storage closed.")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 
 		for {
-			if err := db.Close(); err != nil {
-				log.Printf("failed to close storage: %v", err)
+			select {
+			case <-ctx.Done():
+				log.Println("Storage close timeout, force quiting...")
+				return
+			case <-time.After(1 * time.Second):
 			}
 
+			db.Close()
 			if db.IsClosed() {
 				break
 			}
-
 			log.Println("Waiting for storage to be closed...")
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-			<-ctx.Done()
 		}
-
-		log.Println("Storage closed.")
-	}()
-
-	return nil
+	})
 }

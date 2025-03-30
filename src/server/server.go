@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"search-indexer/running"
 	"search-indexer/server/conf"
@@ -13,7 +12,7 @@ import (
 )
 
 func Run() {
-	fmt.Println("Starting search indexer...")
+	log.Println("Starting search indexer...")
 
 	if err := conf.Load(); err != nil {
 		log.Fatal("Error loading config:", err)
@@ -23,7 +22,7 @@ func Run() {
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
 
-	if err := storage.Init(wg); err != nil {
+	if err := storage.Init(); err != nil {
 		log.Fatal("Error initializing storage:", err)
 		running.Shutdown()
 		return
@@ -43,4 +42,5 @@ func Run() {
 	}
 
 	wg.Wait()
+	storage.CloseAndWait()
 }

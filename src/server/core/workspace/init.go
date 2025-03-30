@@ -21,7 +21,11 @@ func Init(wg *sync.WaitGroup) error {
 	}
 
 	for _, workspace := range allWorkspaces {
-		space := Meta{}
+		space := Meta{
+			ID:               workspace[0],
+			UseGlobalFilters: true,
+		}
+
 		if err := json.Unmarshal([]byte(workspace[1]), &space); err == nil {
 			workspaces[space.ID] = &Workspace{Meta: space}
 			log.Printf("Found workspace: %v, path: %v", space.ID, space.Path)
@@ -44,7 +48,14 @@ func GetOrCreate(path string) (*Workspace, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	workspace := workspaces[path]
+	var workspace *Workspace
+	for _, s := range workspaces {
+		if s.Meta.Path == path {
+			workspace = s
+			break
+		}
+	}
+
 	if workspace == nil {
 		id, err := storage.GetIncreasedWorkspaceID()
 		if err != nil {
@@ -62,7 +73,6 @@ func GetOrCreate(path string) (*Workspace, error) {
 				UseGlobalFilters: true,
 				CreatedAt:        time.Now(),
 				LastAccessed:     time.Now(),
-				LastFullSync:     time.Time{},
 			},
 		}
 
@@ -70,7 +80,8 @@ func GetOrCreate(path string) (*Workspace, error) {
 			return nil, err
 		}
 
-		workspaces[path] = workspace
+		workspaces[id] = workspace
 	}
+
 	return workspace, nil
 }

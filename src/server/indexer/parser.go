@@ -33,7 +33,7 @@ func NewParser() *Parser {
 
 // Start initializes the parser with worker goroutines
 func (p *Parser) Start(wg *sync.WaitGroup) {
-	p.ch = make(chan ParseFile, conf.Get().IndexWorkers)
+	p.ch = make(chan ParseFile, 32)
 
 	for i := 0; i < conf.Get().IndexWorkers; i++ {
 		wg.Add(1)
@@ -52,25 +52,20 @@ func (p *Parser) run(id int, wg *sync.WaitGroup) {
 		case <-running.GetShutdown().Done():
 			return
 		case file := <-p.ch:
-			if err := p.processFile(id, file); err != nil {
-				log.Printf("Parser %d error processing file %s: %v", id, file.FilePath, err)
-			} else {
-				log.Printf("Parser %d processed file %s", id, file.FilePath)
-			}
+			p.processFile(file)
 		}
 	}
 }
 
 // processFile handles the parsing of a single file
-func (p *Parser) processFile(id int, file ParseFile) error {
+func (p *Parser) processFile(file ParseFile) error {
 	baseDir := file.Workspace.Meta.Path
 	doc, err := parse(file.FilePath, baseDir)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	// TODO: Store the parsed document
-	_ = doc
+	writer.Add(file.Workspace, doc)
 	return nil
 }
 

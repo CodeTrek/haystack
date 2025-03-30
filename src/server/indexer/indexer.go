@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"fmt"
+	"log"
 	"search-indexer/server/core/workspace"
 	"sync"
 	"time"
@@ -15,13 +16,13 @@ var (
 
 // Run starts the indexer components in separate goroutines.
 func Run(wg *sync.WaitGroup) {
-	fmt.Println("Starting indexer...")
+	log.Println("Starting indexer...")
 
 	scanner.Start(wg)
 	parser.Start(wg)
 	writer.Start(wg)
 
-	fmt.Println("Indexer started.")
+	log.Println("Indexer started.")
 }
 
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.

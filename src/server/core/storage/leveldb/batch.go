@@ -1,6 +1,7 @@
 package leveldb
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -35,6 +36,10 @@ func (b *Batch) Write() error {
 
 	b.db.mutex.Lock()
 	defer b.db.mutex.Unlock()
+
+	if b.db.closed {
+		return fmt.Errorf("database is closed")
+	}
 
 	if err := b.db.db.Write(b.batch, &opt.WriteOptions{Sync: true}); err != nil {
 		return err

@@ -52,30 +52,51 @@ func (s *Scanner) run(wg *sync.WaitGroup) {
 		}
 
 		s.setCurrent(workspace)
-		if err := s.scan(workspace); err != nil {
+		if err := s.processWorkspace(workspace); err != nil {
 			log.Printf("Error scanning workspace %s: %v", workspace.Meta.Path, err)
 		}
 		s.setCurrent(nil)
 	}
 }
 
-// scan processes a single workspace by scanning its files and applying filters.
-func (s *Scanner) scan(w *workspace.Workspace) error {
+// processWorkspace processes a single workspace by scanning its files and applying filters.
+func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
+	log.Printf("Start processing workspace %s", w.Meta.Path)
+	start := time.Now()
+	fileCount := 0
+	interrupted := false
+	defer func() {
+		log.Printf("Finished processing workspace %s, cost %s, %d files, interrupted: %t", w.Meta.Path, time.Since(start), fileCount, interrupted)
+	}()
+
 	baseDir := w.Meta.Path
 	filters := w.GetFilters()
 
-	var filter fsutils.ListFileFilter
+	var exclude fsutils.ListFileFilter
 	if filters.Exclude.UseGitIgnore {
-		filter = &GitIgnoreFilter{
+		exclude = &GitIgnoreFilter{
 			ignore: gitutils.NewGitIgnore(baseDir),
 		}
 	} else {
-		filter = utils.NewSimpleFilterExclude(filters.Exclude.Customized, baseDir)
+		exclude = utils.NewSimpleFilterExclude(filters.Exclude.Customized, baseDir)
 	}
 
-	return fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: filter}, func(fileInfo fsutils.FileInfo) bool {
-		parser.Add(w, fileInfo.Path)
-		return !running.IsShuttingDown()
+	include := utils.NewSimpleFilter(filters.Include, baseDir)
+	startTime := time.Now()
+	lastTime := time.Now()
+	return fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
+		if include.Match(fileInfo.Path, false) {
+			parser.Add(w, fileInfo.Path)
+			fileCount++
+		}
+
+		if time.Since(lastTime) > 1000*time.Millisecond {
+			log.Printf("Scanning %s, %d files found, elapsed %s", w.Meta.Path, fileCount, time.Since(startTime))
+			lastTime = time.Now()
+		}
+
+		interrupted = running.IsShuttingDown()
+		return !interrupted
 	})
 }
 

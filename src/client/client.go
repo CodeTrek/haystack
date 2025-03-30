@@ -1,7 +1,7 @@
 package client
 
-import "fmt"
+import "log"
 
 func Run() {
-	fmt.Println("Starting search indexer client...")
+	log.Println("Starting search indexer client...")
 }

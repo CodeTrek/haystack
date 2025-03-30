@@ -1,19 +1,18 @@
 package searcher
 
 import (
-	"fmt"
 	"log"
 	"search-indexer/running"
 	"sync"
 )
 
 func Run(wg *sync.WaitGroup) {
-	fmt.Println("Starting searcher...")
+	log.Println("Starting searcher...")
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer log.Println("Searcher shutdown.")
 		running.WaitingForShutdown()
-		log.Println("Searcher shutdown.")
 	}()
 }
