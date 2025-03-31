@@ -14,8 +14,9 @@ type Document struct {
 	ID           string `json:"-"`
 	FullPath     string `json:"full_path"`
 	Size         int64  `json:"size"`
-	ModifiedTime int64  `json:"modified_time"`
 	Hash         string `json:"hash"`
+	ModifiedTime int64  `json:"modified_time"`
+	LastSyncTime int64  `json:"last_sync_time"`
 
 	Words []string `json:"-"`
 }
@@ -114,6 +115,7 @@ func SaveDocuments(workspaceid string, docs []*Document) error {
 	cache := getPendingWrite(workspaceid)
 
 	for _, doc := range docs {
+		doc.LastSyncTime = time.Now().UnixNano()
 		meta, err := EncodeDocumentMetaValue(doc)
 		if err != nil {
 			continue

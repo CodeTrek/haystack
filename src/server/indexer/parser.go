@@ -13,6 +13,7 @@ import (
 	"search-indexer/server/core/workspace"
 	"sort"
 	"sync"
+	"time"
 )
 
 // ParseFile represents a file to be parsed
@@ -59,10 +60,14 @@ func (p *Parser) run(id int, wg *sync.WaitGroup) {
 
 // processFile handles the parsing of a single file
 func (p *Parser) processFile(file ParseFile) error {
-	baseDir := file.Workspace.Meta.Path
-	doc, err := parse(file.FilePath, baseDir)
+	doc, err := parse(file)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
+	}
+
+	// If the document is nil, it means the file has not changed
+	if doc == nil {
+		return nil
 	}
 
 	writer.Add(file.Workspace, doc)
@@ -78,12 +83,21 @@ func (p *Parser) Add(workspace *workspace.Workspace, filePath string) {
 }
 
 // parse reads and processes a file, returning a Document
-func parse(relPath string, baseDir string) (*storage.Document, error) {
-	fullPath := filepath.Join(baseDir, relPath)
+func parse(file ParseFile) (*storage.Document, error) {
+	fullPath := filepath.Join(file.Workspace.Meta.Path, file.FilePath)
 
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	id := fmt.Sprintf("%x", md5.Sum([]byte(fullPath)))
+
+	existing, _ := storage.GetDocument(file.Workspace.Meta.ID, id, false)
+
+	// If the document exists and the modified time is the same, return nil
+	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() {
+		return nil, nil
 	}
 
 	content, err := os.ReadFile(fullPath)
@@ -91,12 +105,20 @@ func parse(relPath string, baseDir string) (*storage.Document, error) {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	hash := fmt.Sprintf("%x", md5.Sum(content))
+
+	// If the document exists and the hash is the same, return nil
+	if existing != nil && existing.Hash == hash {
+		return nil, nil
+	}
+
 	return &storage.Document{
-		ID:           fmt.Sprintf("%x", md5.Sum([]byte(fullPath))),
+		ID:           id,
 		FullPath:     fullPath,
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),
-		Hash:         fmt.Sprintf("%x", md5.Sum(content)),
+		LastSyncTime: time.Now().UnixNano(),
+		Hash:         hash,
 		Words:        parseString(string(content)),
 	}, nil
 }

@@ -37,11 +37,3 @@ func DefaultRootPath() string {
 func IsServerMode() bool {
 	return *serverMode
 }
-
-func DefaultListenPort() int {
-	return 13134
-}
-
-func DefaultIndexWorkers() int {
-	return 4
-}

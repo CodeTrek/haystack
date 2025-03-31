@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"search-indexer/running"
+	"search-indexer/server/conf"
 	"search-indexer/server/core/workspace"
 	"search-indexer/utils"
 	fsutils "search-indexer/utils/fs"
@@ -12,6 +13,14 @@ import (
 	"sync"
 	"time"
 )
+
+type GitIgnoreFilter struct {
+	ignore *gitutils.GitIgnore
+}
+
+func (f *GitIgnoreFilter) Match(path string, isDir bool) bool {
+	return !f.ignore.IsIgnored(path, isDir)
+}
 
 // Scanner represents a file system scanner that processes workspaces in a queue.
 // It is responsible for scanning files in workspaces and applying appropriate filters.
@@ -87,10 +96,14 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	include := utils.NewSimpleFilter(filters.Include, baseDir)
 	startTime := time.Now()
 	lastTime := time.Now()
-	return fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
+	err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
 		if include.Match(fileInfo.Path, false) {
-			parser.Add(w, fileInfo.Path)
-			fileCount++
+			if fileInfo.Size <= conf.Get().MaxFileSize {
+				parser.Add(w, fileInfo.Path)
+				fileCount++
+			} else {
+				log.Printf("File %s (%f MiB) is too large to index, skipping", fileInfo.Path, float64(fileInfo.Size)/1024/1024)
+			}
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {
@@ -101,6 +114,14 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 		interrupted = running.IsShuttingDown()
 		return !interrupted
 	})
+
+	if err != nil {
+		return err
+	}
+	if interrupted {
+		return fmt.Errorf("interrupted")
+	}
+	return nil
 }
 
 // tryPopJob attempts to remove and return the next workspace from the queue.

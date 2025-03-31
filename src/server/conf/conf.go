@@ -10,6 +10,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	DefaultMaxFileSize  = 2 * 1024 * 1024
+	DefaultIndexWorkers = 4
+	DefaultPort         = 13134
+)
+
 type Exclude struct {
 	UseGitIgnore bool     `yaml:"use_git_ignore" json:"use_git_ignore"`
 	Customized   []string `yaml:"customized" json:"customized"` // Won't be used if enable_git_ignore is true
@@ -22,15 +28,15 @@ type Filters struct {
 
 type Conf struct {
 	ForTest struct {
-		Path    string  `yaml:"path"`
-		Filters Filters `yaml:"filters"`
+		Path string `yaml:"path"`
 	} `yaml:"for_test"`
+	Filters Filters `yaml:"filters"`
 
-	LoggingStdout bool    `yaml:"logging_stdout"`
-	HomePath      string  `yaml:"home_path"`
-	Filters       Filters `yaml:"filters"`
-	IndexWorkers  int     `yaml:"index_workers"`
-	Port          int     `yaml:"port"`
+	LoggingStdout bool   `yaml:"logging_stdout"`
+	HomePath      string `yaml:"home_path"`
+	MaxFileSize   int64  `yaml:"max_file_size"`
+	IndexWorkers  int    `yaml:"index_workers"`
+	Port          int    `yaml:"port"`
 }
 
 var conf *Conf
@@ -65,8 +71,9 @@ func Load() error {
 	}
 
 	conf = &Conf{
-		Port:         running.DefaultListenPort(),
-		IndexWorkers: running.DefaultIndexWorkers(),
+		Port:         DefaultPort,
+		IndexWorkers: DefaultIndexWorkers,
+		MaxFileSize:  DefaultMaxFileSize,
 	}
 
 	confBytes := fsutils.ReadFileWithDefault(*serverConf, []byte(``))
@@ -76,6 +83,10 @@ func Load() error {
 
 	if conf.IndexWorkers <= 0 || conf.IndexWorkers > runtime.NumCPU() {
 		conf.IndexWorkers = runtime.NumCPU()
+	}
+
+	if conf.MaxFileSize <= 0 {
+		conf.MaxFileSize = 1048576
 	}
 
 	return nil
