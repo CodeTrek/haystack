@@ -30,7 +30,11 @@ func (b *Batch) Delete(key []byte) {
 }
 
 // Write executes the batch operations
-func (b *Batch) Write() error {
+// @param:
+//
+//	sync: specify if the write should be synced to disk immediately, default is true for data safety.
+//	     However, it will hurt the performance. Set to false if you want to improve the performance.
+func (b *Batch) Write(sync bool) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -41,7 +45,11 @@ func (b *Batch) Write() error {
 		return fmt.Errorf("database is closed")
 	}
 
-	if err := b.db.db.Write(b.batch, &opt.WriteOptions{Sync: true}); err != nil {
+	opts := &opt.WriteOptions{
+		Sync: sync,
+	}
+
+	if err := b.db.db.Write(b.batch, opts); err != nil {
 		return err
 	}
 	return nil

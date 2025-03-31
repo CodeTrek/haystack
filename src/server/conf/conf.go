@@ -26,9 +26,11 @@ type Conf struct {
 		Filters Filters `yaml:"filters"`
 	} `yaml:"for_test"`
 
-	Filters      Filters `yaml:"filters"`
-	IndexWorkers int     `yaml:"index_workers"`
-	Port         int     `yaml:"port"`
+	LoggingStdout bool    `yaml:"logging_stdout"`
+	HomePath      string  `yaml:"home_path"`
+	Filters       Filters `yaml:"filters"`
+	IndexWorkers  int     `yaml:"index_workers"`
+	Port          int     `yaml:"port"`
 }
 
 var conf *Conf
@@ -52,7 +54,7 @@ func Load() error {
 	search := []string{
 		"./server.local.yaml",
 		"./server.yaml",
-		filepath.Join(running.RootPath(), "server.yaml"),
+		filepath.Join(running.DefaultRootPath(), "server.yaml"),
 	}
 
 	for _, path := range search {

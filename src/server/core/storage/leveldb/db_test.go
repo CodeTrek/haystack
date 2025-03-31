@@ -82,7 +82,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	// Execute batch
-	if err := batch.Write(); err != nil {
+	if err := batch.Write(true); err != nil {
 		t.Fatalf("Failed to write batch: %v", err)
 	}
 

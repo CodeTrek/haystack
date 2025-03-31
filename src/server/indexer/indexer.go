@@ -40,6 +40,8 @@ func SyncIfNeeded(path string) error {
 		if err := scanner.Add(workspace); err != nil {
 			return fmt.Errorf("failed to add workspace to scanner queue: %v", err)
 		}
+	} else {
+		log.Printf("Workspace %s is up to date, skipping", path)
 	}
 	return nil
 }

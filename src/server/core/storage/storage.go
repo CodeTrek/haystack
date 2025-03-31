@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"search-indexer/running"
+	"search-indexer/server/conf"
 	"search-indexer/server/core/storage/leveldb"
 	"sync"
 	"time"
@@ -18,11 +19,19 @@ const StorageVersion = "1.0"
 var closeOnce sync.Once
 
 func Init() error {
-	dataPath := filepath.Join(running.RootPath(), "data")
-	dbPath := filepath.Join(dataPath, "leveldb")
-	versionPath := filepath.Join(dataPath, "version")
+	homePath := conf.Get().HomePath
+	if homePath == "" {
+		homePath = running.DefaultRootPath()
+	}
 
-	os.MkdirAll(dataPath, 0755)
+	storagePath := filepath.Join(homePath, "data")
+
+	log.Printf("Init storage path: %s", storagePath)
+
+	dbPath := filepath.Join(storagePath, "leveldb")
+	versionPath := filepath.Join(storagePath, "version")
+
+	os.MkdirAll(storagePath, 0755)
 	os.WriteFile(versionPath, []byte(StorageVersion), 0644)
 
 	var err error
@@ -36,6 +45,8 @@ func Init() error {
 
 func CloseAndWait() {
 	closeOnce.Do(func() {
+		FlushPendingWrites(true)
+
 		log.Println("Closing storage...")
 		defer log.Println("Storage closed.")
 

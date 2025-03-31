@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"strings"
 )
@@ -49,27 +50,31 @@ func KDecodeDocument(key string) (string, string) {
 	return workspaceid, docid
 }
 
-func KEncodeKeyword(workspaceid string, keyword string, docid string) []byte {
-	return []byte(fmt.Sprintf("%s%s|%s|%s", KeywordPrefix, workspaceid, keyword, docid))
+func KEncodeKeyword(workspaceid string, keyword string, doccount int, docshash string) []byte {
+	return []byte(fmt.Sprintf("%s%s|%s|%d|%s", KeywordPrefix, workspaceid, keyword, doccount, docshash))
 }
 
-func KDecodeKeyword(key string) (string, string, string) {
+func KDecodeKeyword(key string) (string, string, int, string) {
 	if !strings.HasPrefix(key, KeywordPrefix) {
-		return "", "", ""
+		return "", "", 0, ""
 	}
 
 	key = strings.TrimPrefix(key, KeywordPrefix)
 
 	parts := strings.Split(key, "|")
-	if len(parts) != 3 {
-		return "", "", ""
+	if len(parts) != 4 {
+		return "", "", 0, ""
 	}
 
 	workspaceid := parts[0]
 	keyword := parts[1]
-	docid := parts[2]
+	doccount, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return "", "", 0, ""
+	}
+	docshash := parts[3]
 
-	return workspaceid, keyword, docid
+	return workspaceid, keyword, doccount, docshash
 }
 
 func VEncodeDocument(doc *Document) ([]byte, error) {

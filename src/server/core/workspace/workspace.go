@@ -40,6 +40,13 @@ func (w *Workspace) Save() error {
 	return storage.SaveWorkspace(w.Meta.ID, string(json))
 }
 
+func (w *Workspace) UpdateLastFullSync() {
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+
+	w.Meta.LastFullSync = time.Now()
+}
+
 func (w *Workspace) GetFilters() conf.Filters {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()

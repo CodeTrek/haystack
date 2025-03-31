@@ -10,6 +10,7 @@
 #
 # Copy the file to one of the above place.
 
+storage_path: # the path to store the database files, default is $HOME/.search-indexer/data
 filters:
   exclude:
     use_git_ignore: false

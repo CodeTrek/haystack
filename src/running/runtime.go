@@ -30,7 +30,7 @@ func Init() error {
 	return nil
 }
 
-func RootPath() string {
+func DefaultRootPath() string {
 	return rootPath
 }
 

@@ -19,6 +19,8 @@ func Run() {
 		return
 	}
 
+	initLog()
+
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
 

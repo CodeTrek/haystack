@@ -54,6 +54,9 @@ func (s *Scanner) run(wg *sync.WaitGroup) {
 		s.setCurrent(workspace)
 		if err := s.processWorkspace(workspace); err != nil {
 			log.Printf("Error scanning workspace %s: %v", workspace.Meta.Path, err)
+		} else {
+			workspace.UpdateLastFullSync()
+			workspace.Save()
 		}
 		s.setCurrent(nil)
 	}

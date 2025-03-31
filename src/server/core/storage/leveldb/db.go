@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -29,7 +31,16 @@ func OpenDB(path string) (*DB, error) {
 	}
 
 	db, err := leveldb.OpenFile(absPath, &opt.Options{
-		Compression: opt.SnappyCompression,
+		Compression:            opt.SnappyCompression,
+		WriteBuffer:            16 * opt.MiB,
+		BlockSize:              64 * opt.KiB,
+		CompactionTableSize:    4 * opt.MiB,
+		Filter:                 filter.NewBloomFilter(10), // 10 bits per key
+		CompactionL0Trigger:    24,
+		WriteL0PauseTrigger:    32,
+		WriteL0SlowdownTrigger: 28,
+
+		// CompactionTableSizeMultiplier: 1.2,
 	})
 
 	if err != nil {
@@ -50,6 +61,16 @@ func OpenDB(path string) (*DB, error) {
 		db.Close()
 		return nil, err
 	}
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			if ldb.IsClosed() {
+				return
+			}
+			ldb.TakeSnapshot()
+		}
+	}()
 
 	return ldb, nil
 }
@@ -146,7 +167,8 @@ func (d *DB) Put(key, value []byte) error {
 		return fmt.Errorf("database is closed")
 	}
 
-	if err := d.db.Put(key, value, nil); err != nil {
+	options := &opt.WriteOptions{Sync: true}
+	if err := d.db.Put(key, value, options); err != nil {
 		return fmt.Errorf("failed to put data: %v", err)
 	}
 	return nil
@@ -181,7 +203,8 @@ func (d *DB) Delete(key []byte) error {
 		return fmt.Errorf("database is closed")
 	}
 
-	if err := d.db.Delete(key, nil); err != nil {
+	options := &opt.WriteOptions{Sync: true}
+	if err := d.db.Delete(key, options); err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
 	}
 	return nil
