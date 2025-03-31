@@ -3,6 +3,8 @@ package indexer
 import (
 	"fmt"
 	"log"
+	"os"
+	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
 	"sync"
 	"time"
@@ -36,7 +38,7 @@ func SyncIfNeeded(workspacePath string) error {
 	}
 
 	if workspace.Meta.LastFullSync.IsZero() ||
-		workspace.Meta.LastFullSync.Before(time.Now().Add(-time.Hour*0)) {
+		workspace.Meta.LastFullSync.Before(time.Now().Add(-time.Hour*24)) {
 		if err := scanner.Add(workspace); err != nil {
 			return fmt.Errorf("failed to add workspace to scanner queue: %v", err)
 		}
@@ -53,5 +55,23 @@ func SyncFile(workspace *workspace.Workspace, filePath string) error {
 
 func RemoveFile(workspace *workspace.Workspace, filePath string) error {
 	// TODO: Implement
+	return nil
+}
+
+func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) error {
+	workspace, err := workspace.Get(workspaceId)
+	if err != nil {
+		return fmt.Errorf("failed to get workspace: %v", err)
+	}
+
+	for _, doc := range docs {
+		stat, err := os.Stat(doc.FullPath)
+		if stat.IsDir() || err != nil {
+			RemoveFile(workspace, doc.FullPath)
+			continue
+		}
+
+		parser.Add(workspace, doc.FullPath)
+	}
 	return nil
 }

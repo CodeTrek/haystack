@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"encoding/json"
+	"fmt"
 	"search-indexer/server/conf"
 	"search-indexer/server/core/storage"
 	"sync"
@@ -31,7 +32,7 @@ type Workspace struct {
 	Mutex sync.Mutex
 }
 
-func GetAllWorkspaces() []string {
+func GetAll() []string {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -41,6 +42,18 @@ func GetAllWorkspaces() []string {
 	}
 
 	return result
+}
+
+func Get(workspaceId string) (*Workspace, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	workspace, ok := workspaces[workspaceId]
+	if !ok || workspace.Deleted {
+		return nil, fmt.Errorf("workspace not found")
+	}
+
+	return workspace, nil
 }
 
 func (w *Workspace) Save() error {

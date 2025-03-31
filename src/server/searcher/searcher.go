@@ -5,6 +5,7 @@ import (
 	"search-indexer/running"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
+	"search-indexer/server/indexer"
 	"strings"
 	"sync"
 	"time"
@@ -14,9 +15,9 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Starting searcher...")
 
 	time.Sleep(1 * time.Second)
-	if wss := workspace.GetAllWorkspaces(); len(wss) > 0 {
+	if wss := workspace.GetAll(); len(wss) > 0 {
 		workspaceId := wss[0]
-		Search(workspaceId, []string{"Sync", "SavedTabGroup"})
+		Search(workspaceId, []string{"word1", "word2"})
 	}
 
 	wg.Add(1)
@@ -43,14 +44,18 @@ func Search(workspaceId string, query []string) {
 		}
 	}
 
+	docs := map[string]*storage.Document{}
 	docPaths := []string{}
 	for docid := range docIds {
 		doc, err := storage.GetDocument(workspaceId, docid, false)
 		if err != nil {
 			continue
 		}
+		docs[docid] = doc
 		docPaths = append(docPaths, doc.FullPath)
 	}
+
+	indexer.RefreshFileIfNeeded(workspaceId, docs)
 
 	log.Println("Search results for", query, "in", time.Since(start), len(docPaths), "results:\n", strings.Join(docPaths, "\n"))
 }
