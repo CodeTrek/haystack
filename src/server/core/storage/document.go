@@ -17,7 +17,7 @@ type Document struct {
 	ModifiedTime int64  `json:"modified_time"`
 	Hash         string `json:"hash"`
 
-	Words []string `json:"words"`
+	Words []string `json:"-"`
 }
 
 // As the Document already breakdown into keywords, we can use the document full-path as the document id
@@ -70,7 +70,7 @@ func FlushPendingWrites(final bool) {
 	docsCount := 0
 	for _, wp := range pendingWrites {
 		for kw, relatedDocs := range wp.Keywords {
-			if !final && len(relatedDocs.DocIds) < 10 && time.Since(relatedDocs.UpdatedAt) < 10*time.Second {
+			if !final && len(relatedDocs.DocIds) < 30 && time.Since(relatedDocs.UpdatedAt) < 5*time.Second {
 				continue
 			}
 
@@ -78,9 +78,9 @@ func FlushPendingWrites(final bool) {
 			docsCount += len(relatedDocs.DocIds)
 
 			sort.Strings(relatedDocs.DocIds)
-			content := strings.Join(relatedDocs.DocIds, "|")
+			content := EncodeKeywordValue(relatedDocs.DocIds)
 			hash := fmt.Sprintf("%x", md5.Sum([]byte(content)))
-			batch.Put(KEncodeKeyword(wp.WorkspaceID, kw, len(relatedDocs.DocIds), hash), []byte(content))
+			batch.Put(EncodeKeywordKey(wp.WorkspaceID, kw, len(relatedDocs.DocIds), hash), []byte(content))
 			delete(wp.Keywords, kw)
 
 			count++
@@ -118,12 +118,13 @@ func SaveDocuments(workspaceid string, docs []*Document) error {
 	cache := getPendingWrite(workspaceid)
 
 	for _, doc := range docs {
-		v, err := VEncodeDocument(doc)
+		meta, err := EncodeDocumentMetaValue(doc)
 		if err != nil {
-			return err
+			continue
 		}
 
-		batch.Put(KEncodeDocument(workspaceid, doc.ID), v)
+		batch.Put(EncodeDocumentMetaKey(workspaceid, doc.ID), meta)
+		batch.Put(EncodeDocumentWordsKey(workspaceid, doc.ID), []byte(strings.Join(doc.Words, " ")))
 
 		for _, kw := range doc.Words {
 			// Add to write cache to merge with other documents and flush later
@@ -139,4 +140,35 @@ func SaveDocuments(workspaceid string, docs []*Document) error {
 	}
 
 	return nil
+}
+
+func GetDocument(workspaceid string, docid string, includeWords bool) (*Document, error) {
+	data, err := db.Get(EncodeDocumentMetaKey(workspaceid, docid))
+	if err != nil {
+		return nil, err
+	}
+
+	if data == nil {
+		return nil, nil
+	}
+
+	doc, err := DecodeDocumentMetaValue(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if includeWords {
+		words, err := db.Get(EncodeDocumentWordsKey(workspaceid, docid))
+		if err != nil {
+			return nil, err
+		}
+
+		if words == nil {
+			words = []byte("")
+		}
+
+		doc.Words = strings.Split(string(words), " ")
+	}
+
+	return doc, nil
 }

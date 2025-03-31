@@ -9,16 +9,17 @@ import (
 )
 
 const (
-	DocPrefix       = "doc:"
+	DocWordsPrefix  = "dw:"
+	DocMetaPrefix   = "dm:"
 	WorkspacePrefix = "ws:"
 	KeywordPrefix   = "kw:"
 )
 
-func KEncodeWorkspace(workspaceid string) []byte {
+func EncodeWorkspaceKey(workspaceid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", WorkspacePrefix, workspaceid))
 }
 
-func KDecodeWorkspace(key string) string {
+func DecodeWorkspaceKey(key string) string {
 	if !strings.HasPrefix(key, WorkspacePrefix) {
 		return ""
 	}
@@ -28,16 +29,29 @@ func KDecodeWorkspace(key string) string {
 	return key
 }
 
-func KEncodeDocument(workspaceid string, docid string) []byte {
-	return []byte(fmt.Sprintf("%s%s|%s", DocPrefix, workspaceid, docid))
+func EncodeDocumentMetaKey(workspaceid string, docid string) []byte {
+	return []byte(fmt.Sprintf("%s%s|%s", DocMetaPrefix, workspaceid, docid))
 }
 
-func KDecodeDocument(key string) (string, string) {
-	if !strings.HasPrefix(key, DocPrefix) {
+func EncodeDocumentMetaValue(doc *Document) ([]byte, error) {
+	return json.Marshal(doc)
+}
+
+func DecodeDocumentMetaValue(data []byte) (*Document, error) {
+	doc := Document{}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, err
+	}
+
+	return &doc, nil
+}
+
+func DecodeDocumentMetaKey(key string) (string, string) {
+	if !strings.HasPrefix(key, DocMetaPrefix) {
 		return "", ""
 	}
 
-	key = strings.TrimPrefix(key, DocPrefix)
+	key = strings.TrimPrefix(key, DocMetaPrefix)
 
 	parts := strings.Split(key, "|")
 	if len(parts) != 2 {
@@ -50,11 +64,37 @@ func KDecodeDocument(key string) (string, string) {
 	return workspaceid, docid
 }
 
-func KEncodeKeyword(workspaceid string, keyword string, doccount int, docshash string) []byte {
+func EncodeDocumentWordsKey(workspaceid string, docid string) []byte {
+	return []byte(fmt.Sprintf("%s%s|%s", DocWordsPrefix, workspaceid, docid))
+}
+
+func DecodeDocumentWordsKey(key string) (string, string) {
+	if !strings.HasPrefix(key, DocWordsPrefix) {
+		return "", ""
+	}
+
+	key = strings.TrimPrefix(key, DocWordsPrefix)
+
+	parts := strings.Split(key, "|")
+	if len(parts) != 2 {
+		return "", ""
+	}
+
+	workspaceid := parts[0]
+	docid := parts[1]
+
+	return workspaceid, docid
+}
+
+func EncodeKeywordSearchKey(workspaceid string, query string) []byte {
+	return []byte(fmt.Sprintf("%s%s|%s", KeywordPrefix, workspaceid, query))
+}
+
+func EncodeKeywordKey(workspaceid string, keyword string, doccount int, docshash string) []byte {
 	return []byte(fmt.Sprintf("%s%s|%s|%d|%s", KeywordPrefix, workspaceid, keyword, doccount, docshash))
 }
 
-func KDecodeKeyword(key string) (string, string, int, string) {
+func DecodeKeywordKey(key string) (string, string, int, string) {
 	if !strings.HasPrefix(key, KeywordPrefix) {
 		return "", "", 0, ""
 	}
@@ -77,11 +117,19 @@ func KDecodeKeyword(key string) (string, string, int, string) {
 	return workspaceid, keyword, doccount, docshash
 }
 
-func VEncodeDocument(doc *Document) ([]byte, error) {
+func EncodeKeywordValue(docids []string) []byte {
+	return []byte(strings.Join(docids, "|"))
+}
+
+func DecodeKeywordValue(data []byte) ([]string, error) {
+	return strings.Split(string(data), "|"), nil
+}
+
+func EncodeDocumentValue(doc *Document) ([]byte, error) {
 	return json.Marshal(doc)
 }
 
-func VDecodeDocument(data []byte) (*Document, error) {
+func DecodeDocumentValue(data []byte) (*Document, error) {
 	doc := Document{}
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, err

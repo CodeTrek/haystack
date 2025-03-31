@@ -2,6 +2,7 @@ package leveldb
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -40,6 +41,10 @@ func (s *Snap) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	defer iter.Release()
 
 	for iter.Next() {
+		if !strings.HasPrefix(string(iter.Key()), string(prefix)) {
+			break
+		}
+
 		if continueScan := cb(iter.Key(), iter.Value()); !continueScan {
 			break
 		}

@@ -3,8 +3,8 @@ package leveldb
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/filter"
@@ -32,8 +32,8 @@ func OpenDB(path string) (*DB, error) {
 
 	db, err := leveldb.OpenFile(absPath, &opt.Options{
 		Compression:            opt.SnappyCompression,
-		WriteBuffer:            16 * opt.MiB,
-		BlockSize:              64 * opt.KiB,
+		WriteBuffer:            8 * opt.MiB,
+		BlockSize:              16 * opt.KiB,
 		CompactionTableSize:    4 * opt.MiB,
 		Filter:                 filter.NewBloomFilter(10), // 10 bits per key
 		CompactionL0Trigger:    24,
@@ -56,21 +56,23 @@ func OpenDB(path string) (*DB, error) {
 		activeSnaps: make(map[*leveldb.Snapshot]int),
 	}
 
-	// Create an initial snapshot
-	if err := ldb.TakeSnapshot(); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	go func() {
-		for {
-			time.Sleep(1 * time.Second)
-			if ldb.IsClosed() {
-				return
-			}
-			ldb.TakeSnapshot()
+	/*
+		// Create an initial snapshot
+		if err := ldb.TakeSnapshot(); err != nil {
+			db.Close()
+			return nil, err
 		}
-	}()
+
+		go func() {
+			for {
+				time.Sleep(1 * time.Second)
+				if ldb.IsClosed() {
+					return
+				}
+				ldb.TakeSnapshot()
+			}
+		}()
+	*/
 
 	return ldb, nil
 }
@@ -108,6 +110,7 @@ func (d *DB) IsClosed() bool {
 	return d.closed
 }
 
+/*
 // TakeSnapshot releases the current snapshot and creates a new one
 func (d *DB) TakeSnapshot() error {
 	d.mutex.Lock()
@@ -157,6 +160,7 @@ func (d *DB) GetSnapshot() (*Snap, func()) {
 		snap.snap = nil
 	}
 }
+*/
 
 // Put stores a key-value pair
 func (d *DB) Put(key, value []byte) error {
@@ -232,6 +236,10 @@ func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	defer iter.Release()
 
 	for iter.Next() {
+		if !strings.HasPrefix(string(iter.Key()), string(prefix)) {
+			break
+		}
+
 		if continueScan := cb(iter.Key(), iter.Value()); !continueScan {
 			break
 		}

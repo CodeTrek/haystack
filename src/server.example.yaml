@@ -15,4 +15,5 @@ filters:
   exclude:
     use_git_ignore: false
     customized: ["node_modules/", "dist/", "build/", "out/", "obj/", ".*"]
-  include: ["*.cc", "*.h", "*.md", "*.js", "*.ts", "*.cpp", "*.txt", "*.mm", "*.java"]
+  include:  ["*.cc", "*.c", "*.hpp", "*.cpp", "*.h", "*.md", "*.js", "*.ts", "*.txt", "*.mm", "*.java", "*.cs", "*.py",
+            "*.kt", "*.go", "*.rb", "*.php", "*.html", "*.css", "*.yaml", "*.yml", "*.toml", "*.xml", "*.sql", "*.sh"]

@@ -31,6 +31,18 @@ type Workspace struct {
 	Mutex sync.Mutex
 }
 
+func GetAllWorkspaces() []string {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	result := []string{}
+	for _, workspace := range workspaces {
+		result = append(result, workspace.Meta.ID)
+	}
+
+	return result
+}
+
 func (w *Workspace) Save() error {
 	json, err := w.serialize()
 	if err != nil {

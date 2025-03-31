@@ -37,7 +37,7 @@ func GetAllWorkspaces() ([][2]string, error) {
 }
 
 func GetWorkspace(id string) (string, error) {
-	v, err := db.Get(KEncodeWorkspace(id))
+	v, err := db.Get(EncodeWorkspaceKey(id))
 	if err != nil {
 		return "", err
 	}
@@ -46,5 +46,5 @@ func GetWorkspace(id string) (string, error) {
 }
 
 func SaveWorkspace(id string, workspace string) error {
-	return db.Put(KEncodeWorkspace(id), []byte(workspace))
+	return db.Put(EncodeWorkspaceKey(id), []byte(workspace))
 }
