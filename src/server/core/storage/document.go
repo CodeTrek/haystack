@@ -86,7 +86,7 @@ func FlushPendingWrites(final bool) {
 			count++
 
 			if count >= 1024 {
-				if err := batch.Write(true); err != nil {
+				if err := batch.Commit(); err != nil {
 					log.Println("Failed to flush pending writes:", err)
 				}
 				batch = db.Batch()
@@ -96,13 +96,9 @@ func FlushPendingWrites(final bool) {
 	}
 
 	if count > 0 {
-		if err := batch.Write(true); err != nil {
+		if err := batch.Commit(); err != nil {
 			log.Println("Failed to flush pending writes:", err)
 		}
-	}
-
-	if wordsCount > 0 {
-		log.Printf("Flushed %d words with %d docs", wordsCount, docsCount)
 	}
 }
 
@@ -135,7 +131,7 @@ func SaveDocuments(workspaceid string, docs []*Document) error {
 		}
 	}
 
-	if err := batch.Write(true); err != nil {
+	if err := batch.Commit(); err != nil {
 		return err
 	}
 

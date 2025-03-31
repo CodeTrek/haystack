@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"search-indexer/running"
 	"search-indexer/server/conf"
-	"search-indexer/server/core/storage/leveldb"
+	"search-indexer/server/core/storage/pebble"
 	"sync"
 	"time"
 )
 
-var db *leveldb.DB
+var db *pebble.DB
 
 const StorageVersion = "1.0"
 
@@ -28,14 +28,14 @@ func Init() error {
 
 	log.Printf("Init storage path: %s", storagePath)
 
-	dbPath := filepath.Join(storagePath, "leveldb")
+	dbPath := filepath.Join(storagePath, "index")
 	versionPath := filepath.Join(storagePath, "version")
 
 	os.MkdirAll(storagePath, 0755)
 	os.WriteFile(versionPath, []byte(StorageVersion), 0644)
 
 	var err error
-	db, err = leveldb.OpenDB(dbPath)
+	db, err = pebble.OpenDB(dbPath)
 	if err != nil {
 		return err
 	}
