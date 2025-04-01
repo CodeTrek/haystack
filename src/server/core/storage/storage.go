@@ -40,12 +40,26 @@ func Init() error {
 		return err
 	}
 
+	go func() {
+		timer := time.NewTicker(1 * time.Second)
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-running.GetShutdown().Done():
+				return
+			case <-timer.C:
+				flushPendingWrites(false)
+			}
+		}
+	}()
+
 	return nil
 }
 
 func CloseAndWait() {
 	closeOnce.Do(func() {
-		FlushPendingWrites(true)
+		flushPendingWrites(true)
 
 		log.Println("Closing storage...")
 		defer log.Println("Storage closed.")

@@ -9,18 +9,19 @@ import (
 	"time"
 )
 
-type UpdateDoc struct {
+type WriteDoc struct {
 	Workspace *workspace.Workspace
 	Document  *storage.Document
+	CreateNew bool
 }
 
 type Writer struct {
-	docs chan *UpdateDoc
+	docs chan *WriteDoc
 }
 
 func NewWriter() *Writer {
 	return &Writer{
-		docs: make(chan *UpdateDoc, 256),
+		docs: make(chan *WriteDoc, 64),
 	}
 }
 
@@ -39,15 +40,13 @@ func (w *Writer) run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case doc := <-w.docs:
-			docs := []*UpdateDoc{doc}
-			docs = append(docs, w.getDocs(127)...)
+			docs := []*WriteDoc{doc}
+			docs = append(docs, w.getPendingWrites(63)...)
 
 			w.processDocs(docs)
-		case <-timer.C:
-			storage.FlushPendingWrites(false)
 		case <-running.GetShutdown().Done():
 			for {
-				docs := w.getDocs(128)
+				docs := w.getPendingWrites(64)
 				if len(docs) == 0 {
 					break
 				}
@@ -62,19 +61,28 @@ func (w *Writer) run(wg *sync.WaitGroup) {
 	}
 }
 
-func (w *Writer) processDocs(docs []*UpdateDoc) {
-	m := make(map[string][]*storage.Document)
+func (w *Writer) processDocs(docs []*WriteDoc) {
+	newDocs := make(map[string][]*storage.Document)
+	existingDocs := make(map[string][]*storage.Document)
 	for _, doc := range docs {
-		m[doc.Workspace.Meta.ID] = append(m[doc.Workspace.Meta.ID], doc.Document)
+		if doc.CreateNew {
+			newDocs[doc.Workspace.Meta.ID] = append(newDocs[doc.Workspace.Meta.ID], doc.Document)
+		} else {
+			existingDocs[doc.Workspace.Meta.ID] = append(existingDocs[doc.Workspace.Meta.ID], doc.Document)
+		}
 	}
 
-	for workspaceID, docs := range m {
-		storage.SaveDocuments(workspaceID, docs)
+	for workspaceID, docs := range newDocs {
+		storage.SaveNewDocuments(workspaceID, docs)
+	}
+
+	for workspaceID, docs := range existingDocs {
+		storage.UpdateDocuments(workspaceID, docs)
 	}
 }
 
-func (w *Writer) getDocs(limit int) []*UpdateDoc {
-	docs := []*UpdateDoc{}
+func (w *Writer) getPendingWrites(limit int) []*WriteDoc {
+	docs := []*WriteDoc{}
 	for {
 		select {
 		case doc := <-w.docs:
@@ -88,9 +96,10 @@ func (w *Writer) getDocs(limit int) []*UpdateDoc {
 	}
 }
 
-func (w *Writer) Add(workspace *workspace.Workspace, doc *storage.Document) {
-	w.docs <- &UpdateDoc{
+func (w *Writer) Add(workspace *workspace.Workspace, doc *storage.Document, createNew bool) {
+	w.docs <- &WriteDoc{
 		Workspace: workspace,
 		Document:  doc,
+		CreateNew: createNew,
 	}
 }

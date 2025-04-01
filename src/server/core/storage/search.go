@@ -17,8 +17,8 @@ func Search(workspaceid string, query string) SearchResult {
 	}
 
 	db.Scan(EncodeKeywordSearchKey(workspaceid, query), func(key, value []byte) bool {
-		_, keyword, _, _ := DecodeKeywordKey(string(key))
-		docids, _ := DecodeKeywordValue(value)
+		_, keyword, _, _ := DecodeKeywordIndexKey(string(key))
+		docids := DecodeKeywordIndexValue(value)
 		if len(docids) > 0 {
 			kr, ok := results.Keywords[keyword]
 			if !ok {

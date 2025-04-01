@@ -89,5 +89,9 @@ func Load() error {
 		conf.MaxFileSize = 1048576
 	}
 
+	if conf.Port <= 0 || conf.Port > 65535 {
+		conf.Port = DefaultPort
+	}
+
 	return nil
 }

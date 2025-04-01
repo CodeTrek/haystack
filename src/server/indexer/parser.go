@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"crypto/md5"
 	"fmt"
 	"log"
 	"os"
@@ -60,7 +59,7 @@ func (p *Parser) run(id int, wg *sync.WaitGroup) {
 
 // processFile handles the parsing of a single file
 func (p *Parser) processFile(file ParseFile) error {
-	doc, err := parse(file)
+	doc, newDoc, err := parse(file)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
@@ -70,7 +69,7 @@ func (p *Parser) processFile(file ParseFile) error {
 		return nil
 	}
 
-	writer.Add(file.Workspace, doc)
+	writer.Add(file.Workspace, doc, newDoc)
 	return nil
 }
 
@@ -83,33 +82,33 @@ func (p *Parser) Add(workspace *workspace.Workspace, filePath string) {
 }
 
 // parse reads and processes a file, returning a Document
-func parse(file ParseFile) (*storage.Document, error) {
+func parse(file ParseFile) (*storage.Document, bool, error) {
 	fullPath := filepath.Join(file.Workspace.Meta.Path, file.FilePath)
 
 	info, err := os.Stat(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat file: %w", err)
+		return nil, false, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	id := fmt.Sprintf("%x", md5.Sum([]byte(fullPath)))
+	id := GetDocumentId(fullPath)
 
 	existing, _ := storage.GetDocument(file.Workspace.Meta.ID, id, false)
 
 	// If the document exists and the modified time is the same, return nil
 	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, false, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	hash := fmt.Sprintf("%x", md5.Sum(content))
+	hash := GetContentHash(content)
 
 	// If the document exists and the hash is the same, return nil
 	if existing != nil && existing.Hash == hash {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	return &storage.Document{
@@ -120,7 +119,7 @@ func parse(file ParseFile) (*storage.Document, error) {
 		LastSyncTime: time.Now().UnixNano(),
 		Hash:         hash,
 		Words:        parseString(string(content)),
-	}, nil
+	}, existing == nil, nil
 }
 
 // parseString extracts unique words from a string

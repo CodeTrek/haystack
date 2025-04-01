@@ -55,6 +55,9 @@ func SyncFile(workspace *workspace.Workspace, filePath string) error {
 
 func RemoveFile(workspace *workspace.Workspace, filePath string) error {
 	// TODO: Implement
+	docid := GetDocumentId(filePath)
+
+	storage.DeleteDocument(workspace.Meta.ID, docid)
 	return nil
 }
 

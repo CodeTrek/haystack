@@ -90,11 +90,11 @@ func EncodeKeywordSearchKey(workspaceid string, query string) []byte {
 	return []byte(fmt.Sprintf("%s%s|%s", KeywordPrefix, workspaceid, query))
 }
 
-func EncodeKeywordKey(workspaceid string, keyword string, doccount int, docshash string) []byte {
+func EncodeKeywordIndexKey(workspaceid string, keyword string, doccount int, docshash string) []byte {
 	return []byte(fmt.Sprintf("%s%s|%s|%d|%s", KeywordPrefix, workspaceid, keyword, doccount, docshash))
 }
 
-func DecodeKeywordKey(key string) (string, string, int, string) {
+func DecodeKeywordIndexKey(key string) (string, string, int, string) {
 	if !strings.HasPrefix(key, KeywordPrefix) {
 		return "", "", 0, ""
 	}
@@ -117,12 +117,12 @@ func DecodeKeywordKey(key string) (string, string, int, string) {
 	return workspaceid, keyword, doccount, docshash
 }
 
-func EncodeKeywordValue(docids []string) []byte {
+func EncodeKeywordIndexValue(docids []string) []byte {
 	return []byte(strings.Join(docids, "|"))
 }
 
-func DecodeKeywordValue(data []byte) ([]string, error) {
-	return strings.Split(string(data), "|"), nil
+func DecodeKeywordIndexValue(data []byte) []string {
+	return strings.Split(string(data), "|")
 }
 
 func EncodeDocumentValue(doc *Document) ([]byte, error) {
