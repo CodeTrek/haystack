@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"search-indexer/conf"
 	"search-indexer/running"
-	"search-indexer/server/conf"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
 	"sort"
@@ -36,7 +36,7 @@ func (p *Parser) Start(wg *sync.WaitGroup) {
 
 	p.ch = make(chan ParseFile, 32)
 
-	for i := 0; i < conf.Get().IndexWorkers; i++ {
+	for i := 0; i < conf.Get().Server.IndexWorkers; i++ {
 		wg.Add(1)
 		go p.run(i, wg)
 	}

@@ -26,17 +26,30 @@ type Filters struct {
 	Include []string `yaml:"include" optional:"true" json:"include"`
 }
 
+type Global struct {
+	HomePath string `yaml:"home_path"`
+	Port     int    `yaml:"port"`
+}
+
+type Client struct {
+}
+
+type Server struct {
+	MaxFileSize  int64   `yaml:"max_file_size"`
+	IndexWorkers int     `yaml:"index_workers"`
+	Filters      Filters `yaml:"filters"`
+
+	LoggingStdout bool `yaml:"logging_stdout"`
+}
+
 type Conf struct {
+	Global Global `yaml:"global"`
+	Client Client `yaml:"client"`
+	Server Server `yaml:"server"`
+
 	ForTest struct {
 		Path string `yaml:"path"`
 	} `yaml:"for_test"`
-	Filters Filters `yaml:"filters"`
-
-	LoggingStdout bool   `yaml:"logging_stdout"`
-	HomePath      string `yaml:"home_path"`
-	MaxFileSize   int64  `yaml:"max_file_size"`
-	IndexWorkers  int    `yaml:"index_workers"`
-	Port          int    `yaml:"port"`
 }
 
 var conf *Conf
@@ -58,9 +71,10 @@ func Load() error {
 	checkMode()
 
 	search := []string{
-		"./server.local.yaml",
-		"./server.yaml",
-		filepath.Join(running.DefaultRootPath(), "server.yaml"),
+		"./config.local.yaml",
+		"./config.yaml",
+		filepath.Join(running.DefaultRootPath(), "config.yaml"),
+		"./config.example.yaml",
 	}
 
 	for _, path := range search {
@@ -71,9 +85,15 @@ func Load() error {
 	}
 
 	conf = &Conf{
-		Port:         DefaultPort,
-		IndexWorkers: DefaultIndexWorkers,
-		MaxFileSize:  DefaultMaxFileSize,
+		Global: Global{
+			HomePath: running.DefaultRootPath(),
+			Port:     DefaultPort,
+		},
+		Client: Client{},
+		Server: Server{
+			MaxFileSize:  DefaultMaxFileSize,
+			IndexWorkers: DefaultIndexWorkers,
+		},
 	}
 
 	confBytes := fsutils.ReadFileWithDefault(*serverConf, []byte(``))
@@ -81,16 +101,16 @@ func Load() error {
 		return err
 	}
 
-	if conf.IndexWorkers <= 0 || conf.IndexWorkers > runtime.NumCPU() {
-		conf.IndexWorkers = runtime.NumCPU()
+	if conf.Server.IndexWorkers <= 0 || conf.Server.IndexWorkers > runtime.NumCPU() {
+		conf.Server.IndexWorkers = runtime.NumCPU()
 	}
 
-	if conf.MaxFileSize <= 0 {
-		conf.MaxFileSize = 1048576
+	if conf.Server.MaxFileSize <= 0 {
+		conf.Server.MaxFileSize = DefaultMaxFileSize
 	}
 
-	if conf.Port <= 0 || conf.Port > 65535 {
-		conf.Port = DefaultPort
+	if conf.Global.Port <= 0 || conf.Global.Port > 65535 {
+		conf.Global.Port = DefaultPort
 	}
 
 	return nil

@@ -4,8 +4,8 @@ import (
 	"container/list"
 	"fmt"
 	"log"
+	"search-indexer/conf"
 	"search-indexer/running"
-	"search-indexer/server/conf"
 	"search-indexer/server/core/workspace"
 	"search-indexer/utils"
 	fsutils "search-indexer/utils/fs"
@@ -98,7 +98,7 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	lastTime := time.Now()
 	err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
 		if include.Match(fileInfo.Path, false) {
-			if fileInfo.Size <= conf.Get().MaxFileSize {
+			if fileInfo.Size <= conf.Get().Server.MaxFileSize {
 				parser.Add(w, fileInfo.Path)
 				fileCount++
 			} else {

@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"search-indexer/conf"
 	"search-indexer/running"
-	"search-indexer/server/conf"
 	"search-indexer/server/core/storage/pebble"
 	"sync"
 	"time"
@@ -19,7 +19,7 @@ const StorageVersion = "1.0"
 var closeOnce sync.Once
 
 func Init() error {
-	homePath := conf.Get().HomePath
+	homePath := conf.Get().Global.HomePath
 	if homePath == "" {
 		homePath = running.DefaultRootPath()
 	}

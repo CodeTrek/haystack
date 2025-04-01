@@ -2,8 +2,8 @@ package server
 
 import (
 	"log"
+	"search-indexer/conf"
 	"search-indexer/running"
-	"search-indexer/server/conf"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"

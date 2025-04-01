@@ -3,7 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
-	"search-indexer/server/conf"
+	"search-indexer/conf"
 	"search-indexer/server/core/storage"
 	"sync"
 	"time"
@@ -76,7 +76,7 @@ func (w *Workspace) GetFilters() conf.Filters {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 	if w.Meta.Filters == nil || w.Meta.UseGlobalFilters {
-		return conf.Get().Filters
+		return conf.Get().Server.Filters
 	}
 
 	return *w.Meta.Filters

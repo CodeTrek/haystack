@@ -4,16 +4,16 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"search-indexer/server/conf"
+	"search-indexer/conf"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func initLog() {
-	if conf.Get().LoggingStdout {
+	if conf.Get().Server.LoggingStdout {
 		log.SetOutput(os.Stdout)
 	} else {
-		dir := filepath.Join(conf.Get().HomePath, "logs")
+		dir := filepath.Join(conf.Get().Global.HomePath, "logs")
 		logFile := filepath.Join(dir, "server.log")
 
 		log.SetOutput(&lumberjack.Logger{
