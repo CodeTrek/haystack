@@ -33,6 +33,7 @@ func NewParser() *Parser {
 
 // Start initializes the parser with worker goroutines
 func (p *Parser) Start(wg *sync.WaitGroup) {
+
 	p.ch = make(chan ParseFile, 32)
 
 	for i := 0; i < conf.Get().IndexWorkers; i++ {
