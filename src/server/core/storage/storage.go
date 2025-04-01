@@ -20,10 +20,6 @@ var closeOnce sync.Once
 
 func Init() error {
 	homePath := conf.Get().Global.HomePath
-	if homePath == "" {
-		homePath = running.DefaultRootPath()
-	}
-
 	storagePath := filepath.Join(homePath, "data")
 
 	log.Printf("Init storage path: %s", storagePath)

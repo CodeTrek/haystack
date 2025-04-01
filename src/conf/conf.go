@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -65,20 +66,20 @@ func Get() *Conf {
 	return conf
 }
 
-var serverConf *string
-
 func Load() error {
 	checkMode()
+	homePath := filepath.Join(running.UserHomeDir(), ".search-indexer")
 
 	search := []string{
 		"./config.local.yaml",
 		"./config.yaml",
-		filepath.Join(running.DefaultRootPath(), "config.yaml"),
+		filepath.Join(homePath, "config.yaml"),
 		"./config.example.yaml",
 	}
 
+	var confFile *string
 	for _, path := range search {
-		serverConf = &path
+		confFile = &path
 		if _, err := os.Stat(path); err == nil {
 			break
 		}
@@ -86,7 +87,7 @@ func Load() error {
 
 	conf = &Conf{
 		Global: Global{
-			HomePath: running.DefaultRootPath(),
+			HomePath: homePath,
 			Port:     DefaultPort,
 		},
 		Client: Client{},
@@ -96,9 +97,20 @@ func Load() error {
 		},
 	}
 
-	confBytes := fsutils.ReadFileWithDefault(*serverConf, []byte(``))
+	confBytes := fsutils.ReadFileWithDefault(*confFile, []byte(``))
 	if err := yaml.Unmarshal(confBytes, conf); err != nil {
 		return err
+	}
+
+	if conf.Global.HomePath == "" {
+		conf.Global.HomePath = homePath
+	}
+
+	if err := os.Mkdir(conf.Global.HomePath, 0755); err != nil {
+		if !os.IsExist(err) {
+			log.Fatalf("Failed to create home directory: %v", err)
+			return err
+		}
 	}
 
 	if conf.Server.IndexWorkers <= 0 || conf.Server.IndexWorkers > runtime.NumCPU() {

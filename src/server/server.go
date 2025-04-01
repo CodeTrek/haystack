@@ -14,11 +14,6 @@ import (
 func Run() {
 	log.Println("Starting search indexer...")
 
-	if err := conf.Load(); err != nil {
-		log.Fatal("Error loading config:", err)
-		return
-	}
-
 	initLog()
 
 	wg := &sync.WaitGroup{}

@@ -1,53 +1,36 @@
-//go:build windows
-
 package running
 
 import (
 	"fmt"
-	"syscall"
-	"unsafe"
+	"os"
+	"path/filepath"
+
+	"github.com/gofrs/flock"
 )
 
-var (
-	kernel32     = syscall.NewLazyDLL("kernel32.dll")
-	createMutexW = kernel32.NewProc("CreateMutexW")
-	releaseMutex = kernel32.NewProc("ReleaseMutex")
-	closeHandle  = kernel32.NewProc("CloseHandle")
-	lastError    = kernel32.NewProc("GetLastError")
-)
+func CheckAndLockServer(lockFile string) (func(), error) {
+	// Ensure the directory exists
+	dir := filepath.Dir(lockFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create lock directory: %v", err)
+	}
 
-func LockAndRunAsServer() (func(), error) {
-	fmt.Println("Try LockAndRunAsServer")
-	// Create a mutex with a unique name for current session
-	mutexName := "Global\\SearchIndexerSingleInstance@20250401"
-	namePtr, err := syscall.UTF16PtrFromString(mutexName)
+	// Create a new file lock
+	fileLock := flock.New(lockFile)
+
+	// Try to acquire an exclusive lock
+	locked, err := fileLock.TryLock()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to acquire lock: %v", err)
 	}
-
-	// Create mutex
-	handle, _, err := createMutexW.Call(
-		0, // Security attributes
-		1, // Initial owner
-		uintptr(unsafe.Pointer(namePtr)),
-	)
-	if handle == 0 {
-		return nil, err
+	if !locked {
+		return nil, fmt.Errorf("another instance is already running")
 	}
-
-	// Check if mutex already exists
-	errCode, _, _ := lastError.Call()
-	if syscall.Errno(errCode) == syscall.ERROR_ALREADY_EXISTS {
-		closeHandle.Call(handle)
-		return nil, syscall.Errno(syscall.ERROR_ALREADY_EXISTS)
-	}
-
-	fmt.Println("Mutex created", handle)
 
 	// Return cleanup function
 	cleanup := func() {
-		releaseMutex.Call(handle)
-		closeHandle.Call(handle)
+		fileLock.Unlock()
+		os.Remove(lockFile)
 	}
 
 	return cleanup, nil
