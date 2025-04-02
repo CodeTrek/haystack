@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"search-indexer/conf"
-	"search-indexer/running"
 	"search-indexer/server/core/storage/pebble"
+	"search-indexer/shared/running"
 	"sync"
 	"time"
 )

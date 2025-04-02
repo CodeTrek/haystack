@@ -2,9 +2,9 @@ package indexer
 
 import (
 	"log"
-	"search-indexer/running"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
+	"search-indexer/shared/running"
 	"sync"
 	"time"
 )

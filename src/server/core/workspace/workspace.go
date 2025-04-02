@@ -44,6 +44,19 @@ func GetAll() []string {
 	return result
 }
 
+func GetByPath(path string) (*Workspace, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	for _, workspace := range workspaces {
+		if workspace.Meta.Path == path {
+			return workspace, nil
+		}
+	}
+
+	return nil, fmt.Errorf("workspace not found")
+}
+
 func Get(workspaceId string) (*Workspace, error) {
 	mutex.Lock()
 	defer mutex.Unlock()

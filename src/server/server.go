@@ -4,19 +4,26 @@ import (
 	"fmt"
 	"log"
 	"search-indexer/conf"
-	"search-indexer/running"
 	"search-indexer/server/core/storage"
 	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"
 	"search-indexer/server/searcher"
 	"search-indexer/server/server"
+	"search-indexer/shared/running"
 	"sync"
 )
 
-func Run() {
-	log.Println("Starting search indexer...")
+func Run(lockFile string) {
+	cleanup, err := running.CheckAndLockServer(lockFile)
+	if err != nil {
+		log.Fatal("Error locking and running as server:", err)
+		return
+	}
+	defer cleanup()
 
 	initLog()
+
+	log.Println("Starting search indexer...")
 
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
@@ -44,4 +51,6 @@ func Run() {
 
 	wg.Wait()
 	storage.CloseAndWait()
+
+	log.Println("Search indexer stopped")
 }

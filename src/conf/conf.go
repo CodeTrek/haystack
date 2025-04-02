@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"search-indexer/running"
+	"search-indexer/shared/running"
 	fsutils "search-indexer/utils/fs"
 
 	"gopkg.in/yaml.v3"
@@ -15,6 +15,10 @@ const (
 	DefaultMaxFileSize  = 2 * 1024 * 1024
 	DefaultIndexWorkers = 4
 	DefaultPort         = 13134
+
+	DefaultMaxSearchLines        = 100000
+	DefaultMaxSearchFiles        = 1000
+	DefaultMaxSearchLinesPerFile = 1000
 )
 
 type Exclude struct {
@@ -27,6 +31,12 @@ type Filters struct {
 	Include []string `yaml:"include" optional:"true" json:"include"`
 }
 
+type SearchLimit struct {
+	MaxLines     int `yaml:"max_lines" json:"max_lines"`
+	Files        int `yaml:"files" json:"files"`
+	LinesPerFile int `yaml:"lines_per_file" json:"lines_per_file"`
+}
+
 type Global struct {
 	HomePath string `yaml:"home_path"`
 	Port     int    `yaml:"port"`
@@ -36,9 +46,10 @@ type Client struct {
 }
 
 type Server struct {
-	MaxFileSize  int64   `yaml:"max_file_size"`
-	IndexWorkers int     `yaml:"index_workers"`
-	Filters      Filters `yaml:"filters"`
+	MaxFileSize  int64       `yaml:"max_file_size"`
+	IndexWorkers int         `yaml:"index_workers"`
+	Filters      Filters     `yaml:"filters"`
+	SearchLimit  SearchLimit `yaml:"search_limit"`
 
 	LoggingStdout bool `yaml:"logging_stdout"`
 }
@@ -94,6 +105,11 @@ func Load() error {
 		Server: Server{
 			MaxFileSize:  DefaultMaxFileSize,
 			IndexWorkers: DefaultIndexWorkers,
+			SearchLimit: SearchLimit{
+				MaxLines:     DefaultMaxSearchLines,
+				Files:        DefaultMaxSearchFiles,
+				LinesPerFile: DefaultMaxSearchLinesPerFile,
+			},
 		},
 	}
 
@@ -123,6 +139,18 @@ func Load() error {
 
 	if conf.Global.Port <= 0 || conf.Global.Port > 65535 {
 		conf.Global.Port = DefaultPort
+	}
+
+	if conf.Server.SearchLimit.MaxLines <= 0 || conf.Server.SearchLimit.MaxLines > DefaultMaxSearchLines {
+		conf.Server.SearchLimit.MaxLines = DefaultMaxSearchLines
+	}
+
+	if conf.Server.SearchLimit.Files <= 0 || conf.Server.SearchLimit.Files > DefaultMaxSearchFiles {
+		conf.Server.SearchLimit.Files = DefaultMaxSearchFiles
+	}
+
+	if conf.Server.SearchLimit.LinesPerFile <= 0 || conf.Server.SearchLimit.LinesPerFile > DefaultMaxSearchLinesPerFile {
+		conf.Server.SearchLimit.LinesPerFile = DefaultMaxSearchLinesPerFile
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package conf
 
 import (
-	"search-indexer/running"
+	"search-indexer/shared/running"
 )
 
 func checkMode() {

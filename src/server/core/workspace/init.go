@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"search-indexer/running"
 	"search-indexer/server/core/storage"
+	"search-indexer/shared/running"
 	"sync"
 	"time"
 )

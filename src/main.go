@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"search-indexer/conf"
-	"search-indexer/running"
 	"search-indexer/server"
+	"search-indexer/shared/running"
 )
 
 func main() {
@@ -20,17 +20,12 @@ func main() {
 		log.Fatal("Error loading config:", err)
 		return
 	}
-
 	lockFile := filepath.Join(conf.Get().Global.HomePath, "server.lock")
 	if running.IsServerMode() {
-		cleanup, err := running.CheckAndLockServer(lockFile)
-		if err != nil {
-			log.Fatal("Error locking and running as server:", err)
-			return
+		server.Run(lockFile)
+		if running.IsRestart() {
+			running.StartNewServer()
 		}
-		defer cleanup()
-
-		server.Run()
 	} else {
 		log.Fatal("Client mode not implemented yet")
 	}

@@ -2,23 +2,15 @@ package searcher
 
 import (
 	"log"
-	"search-indexer/running"
 	"search-indexer/server/core/storage"
-	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"
-	"strings"
+	"search-indexer/shared/requests"
+	"search-indexer/shared/running"
 	"sync"
-	"time"
 )
 
 func Run(wg *sync.WaitGroup) {
 	log.Println("Starting searcher...")
-
-	time.Sleep(1 * time.Second)
-	if wss := workspace.GetAll(); len(wss) > 0 {
-		workspaceId := wss[0]
-		Search(workspaceId, []string{"word1", "word2"})
-	}
 
 	wg.Add(1)
 	go func() {
@@ -28,8 +20,7 @@ func Run(wg *sync.WaitGroup) {
 	}()
 }
 
-func Search(workspaceId string, query []string) {
-	start := time.Now()
+func SearchContent(workspaceId string, query []string) []requests.SearchContentResult {
 	results := []storage.SearchResult{}
 	for _, q := range query {
 		results = append(results, storage.Search(workspaceId, q))
@@ -57,5 +48,13 @@ func Search(workspaceId string, query []string) {
 
 	indexer.RefreshFileIfNeeded(workspaceId, docs)
 
-	log.Println("Search results for", query, "in", time.Since(start), len(docPaths), "results:\n", strings.Join(docPaths, "\n"))
+	// TODO: Add lines to the results
+	finalResults := []requests.SearchContentResult{}
+	for _, doc := range docs {
+		finalResults = append(finalResults, requests.SearchContentResult{
+			File: doc.FullPath,
+		})
+	}
+
+	return finalResults
 }
