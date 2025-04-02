@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"search-indexer/conf"
 	"search-indexer/running"
@@ -8,6 +9,7 @@ import (
 	"search-indexer/server/core/workspace"
 	"search-indexer/server/indexer"
 	"search-indexer/server/searcher"
+	"search-indexer/server/server"
 	"sync"
 )
 
@@ -37,6 +39,8 @@ func Run() {
 	if conf.Get().ForTest.Path != "" {
 		indexer.SyncIfNeeded(conf.Get().ForTest.Path)
 	}
+
+	server.StartServer(wg, fmt.Sprintf("127.0.0.1:%d", conf.Get().Global.Port))
 
 	wg.Wait()
 	storage.CloseAndWait()
