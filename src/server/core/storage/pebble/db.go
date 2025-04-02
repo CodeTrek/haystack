@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
@@ -27,6 +28,14 @@ func OpenDB(path string) (*DB, error) {
 
 	// Configure Pebble options
 	opts := &pebble.Options{
+		WALMinSyncInterval: func() time.Duration {
+			// Sync the WAL every 500us to avoid latency spikes.
+			// Allow more operations to arrive and reduce IO operations
+			return 500 * time.Microsecond
+		},
+		// Allow more files to be open
+		MaxOpenFiles: 2000,
+
 		// Set write buffer size to 8MB
 		MemTableSize: 8 * 1024 * 1024,
 		// Set max memtable count to 2

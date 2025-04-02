@@ -26,6 +26,10 @@ func StartServer(wg *sync.WaitGroup, addr string) {
 	http.HandleFunc("/api/v1/server/stop", handleStop)
 	http.HandleFunc("/api/v1/server/status", handleStatus)
 
+	http.HandleFunc("/api/v1/workspace/create", handleCreateWorkspace)
+	http.HandleFunc("/api/v1/workspace/delete", handleDeleteWorkspace)
+	http.HandleFunc("/api/v1/workspace/list", handleListWorkspace)
+
 	http.HandleFunc("/api/v1/search/content", handleSearchContent)
 
 	// Start server in a goroutine

@@ -27,6 +27,10 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Indexer started.")
 }
 
+func CreateWorkspace(workspacePath string) error {
+	return SyncIfNeeded(workspacePath)
+}
+
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
 // A workspace needs to be synced if:
 // 1. It has never been synced (LastFullSync is zero)

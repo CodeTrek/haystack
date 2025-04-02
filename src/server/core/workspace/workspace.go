@@ -3,14 +3,19 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"search-indexer/conf"
 	"search-indexer/server/core/storage"
+	"search-indexer/utils"
 	"sync"
 	"time"
 )
 
 var mutex sync.Mutex
 var workspaces map[string]*Workspace
+var workspacePaths map[string]*Workspace
 
 type Meta struct {
 	ID               string        `json:"id"`
@@ -38,7 +43,7 @@ func GetAll() []string {
 
 	result := []string{}
 	for _, workspace := range workspaces {
-		result = append(result, workspace.Meta.ID)
+		result = append(result, workspace.Meta.Path)
 	}
 
 	return result
@@ -48,10 +53,9 @@ func GetByPath(path string) (*Workspace, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	for _, workspace := range workspaces {
-		if workspace.Meta.Path == path {
-			return workspace, nil
-		}
+	path = utils.NormalizePath(path)
+	if workspace, ok := workspacePaths[path]; ok {
+		return workspace, nil
 	}
 
 	return nil, fmt.Errorf("workspace not found")
@@ -101,9 +105,74 @@ func (w *Workspace) Delete() error {
 
 	w.Deleted = true
 	delete(workspaces, w.Meta.ID)
+	delete(workspacePaths, w.Meta.Path)
 
 	// TODO: Delete index
 	return nil
+}
+
+func GetOrCreate(workspacePath string) (*Workspace, error) {
+	workspacePath = utils.NormalizePath(workspacePath)
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	workspace := workspacePaths[workspacePath]
+	if workspace == nil {
+		// Validate the workspace path
+		// 1. It must be absolute
+		// 2. It must be a directory
+		if !filepath.IsAbs(workspacePath) {
+			return nil, fmt.Errorf("workspace path must be absolute")
+		}
+
+		info, err := os.Stat(workspacePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat workspace: %v", err)
+		}
+
+		if !info.IsDir() {
+			return nil, fmt.Errorf("workspace path must be a directory")
+		}
+
+		var id string
+		// Try 10 times to generate a unique workspace id
+		for i := 0; i < 10; i++ {
+			id, err = storage.GetIncreasedWorkspaceID()
+			if err != nil {
+				return nil, err
+			}
+
+			if _, ok := workspaces[id]; !ok {
+				break
+			}
+		}
+
+		if _, ok := workspaces[id]; ok {
+			return nil, fmt.Errorf("failed to generate unique workspace id")
+		}
+
+		workspace = &Workspace{
+			Meta: Meta{
+				ID:               id,
+				Path:             workspacePath,
+				UseGlobalFilters: true,
+				CreatedAt:        time.Now(),
+				LastAccessed:     time.Now(),
+			},
+		}
+
+		if err := workspace.Save(); err != nil {
+			return nil, err
+		}
+
+		workspaces[id] = workspace
+		workspacePaths[workspacePath] = workspace
+
+		log.Printf("New workspace created: %v, path: %v", id, workspacePath)
+	}
+
+	return workspace, nil
 }
 
 func (w *Workspace) serialize() ([]byte, error) {

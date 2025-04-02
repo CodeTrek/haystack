@@ -9,13 +9,12 @@ import (
 	"search-indexer/server/core/workspace"
 	"search-indexer/server/searcher"
 	"search-indexer/shared/requests"
+	"search-indexer/utils"
 )
 
 // handleSearchContent handles the search content endpoint
 // It will search the content of the server
 func handleSearchContent(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	var request requests.SearchContentRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -23,6 +22,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	if request.Workspace == "" {
@@ -33,8 +33,8 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath := filepath.Clean(request.Workspace)
-	if !filepath.IsAbs(fullPath) {
+	workspacePath := utils.NormalizePath(request.Workspace)
+	if !filepath.IsAbs(workspacePath) {
 		json.NewEncoder(w).Encode(requests.SearchContentResponse{
 			Code:    1,
 			Message: "Workspace path must be absolute",
@@ -42,7 +42,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	workspace, err := workspace.GetByPath(fullPath)
+	workspace, err := workspace.GetByPath(workspacePath)
 	if err != nil {
 		json.NewEncoder(w).Encode(requests.SearchContentResponse{
 			Code:    1,
@@ -64,7 +64,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(requests.SearchContentResponse{
 		Code:    0,
-		Message: "Success",
+		Message: "Ok",
 		Data: struct {
 			Results []requests.SearchContentResult `json:"results,omitempty"`
 		}{

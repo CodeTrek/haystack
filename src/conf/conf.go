@@ -32,9 +32,9 @@ type Filters struct {
 }
 
 type SearchLimit struct {
-	MaxLines     int `yaml:"max_lines" json:"max_lines"`
-	Files        int `yaml:"files" json:"files"`
-	LinesPerFile int `yaml:"lines_per_file" json:"lines_per_file"`
+	MaxLines        int `yaml:"max_lines" json:"max_lines,omitempty"`
+	MaxFiles        int `yaml:"max_files" json:"max_files,omitempty"`
+	MaxLinesPerFile int `yaml:"max_lines_per_file" json:"max_lines_per_file,omitempty"`
 }
 
 type Global struct {
@@ -106,9 +106,9 @@ func Load() error {
 			MaxFileSize:  DefaultMaxFileSize,
 			IndexWorkers: DefaultIndexWorkers,
 			SearchLimit: SearchLimit{
-				MaxLines:     DefaultMaxSearchLines,
-				Files:        DefaultMaxSearchFiles,
-				LinesPerFile: DefaultMaxSearchLinesPerFile,
+				MaxLines:        DefaultMaxSearchLines,
+				MaxFiles:        DefaultMaxSearchFiles,
+				MaxLinesPerFile: DefaultMaxSearchLinesPerFile,
 			},
 		},
 	}
@@ -145,12 +145,12 @@ func Load() error {
 		conf.Server.SearchLimit.MaxLines = DefaultMaxSearchLines
 	}
 
-	if conf.Server.SearchLimit.Files <= 0 || conf.Server.SearchLimit.Files > DefaultMaxSearchFiles {
-		conf.Server.SearchLimit.Files = DefaultMaxSearchFiles
+	if conf.Server.SearchLimit.MaxFiles <= 0 || conf.Server.SearchLimit.MaxFiles > DefaultMaxSearchFiles {
+		conf.Server.SearchLimit.MaxFiles = DefaultMaxSearchFiles
 	}
 
-	if conf.Server.SearchLimit.LinesPerFile <= 0 || conf.Server.SearchLimit.LinesPerFile > DefaultMaxSearchLinesPerFile {
-		conf.Server.SearchLimit.LinesPerFile = DefaultMaxSearchLinesPerFile
+	if conf.Server.SearchLimit.MaxLinesPerFile <= 0 || conf.Server.SearchLimit.MaxLinesPerFile > DefaultMaxSearchLinesPerFile {
+		conf.Server.SearchLimit.MaxLinesPerFile = DefaultMaxSearchLinesPerFile
 	}
 
 	return nil
