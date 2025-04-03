@@ -10,4 +10,4 @@ build/
 node_modules/
 
 .cache/
-.search-indexer/
+.haystack/

@@ -23,7 +23,7 @@ func Run(lockFile string) {
 
 	initLog()
 
-	log.Println("Starting search indexer...")
+	log.Println("Starting haystack server...")
 
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
@@ -52,5 +52,5 @@ func Run(lockFile string) {
 	wg.Wait()
 	storage.CloseAndWait()
 
-	log.Println("Search indexer stopped")
+	log.Println("Haystack server stopped")
 }

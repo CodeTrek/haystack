@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -131,7 +132,7 @@ func parseString(str string) []string {
 	uniqueWords := make(map[string]struct{})
 	for _, word := range words {
 		if isValidWord(word) {
-			uniqueWords[word] = struct{}{}
+			uniqueWords[strings.ToLower(word)] = struct{}{}
 		}
 	}
 

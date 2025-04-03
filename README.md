@@ -38,8 +38,8 @@ The Search Indexer is structured with the following components:
 Clone the repository:
 
 ```bash
-git clone https://github.com/CodeTrek/search-indexer.git
-cd search-indexer/src
+git clone https://github.com/CodeTrek/haystack.git
+cd haystack/src
 ```
 
 Install dependencies:
@@ -53,10 +53,10 @@ go mod download
 Copy the example configuration and modify as needed:
 
 ```bash
-cp server.example.yaml server.local.yaml
+cp config.example.yaml config.local.yaml
 ```
 
-Edit `server.local.yaml` to configure your indexing preferences.
+Edit `config.local.yaml` to configure your indexing preferences.
 
 ### Running the Server
 

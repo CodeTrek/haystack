@@ -1,4 +1,4 @@
-# Search Query Syntax Guide
+# Search Query Syntax Guide [WIP]
 
 ## Overview
 
