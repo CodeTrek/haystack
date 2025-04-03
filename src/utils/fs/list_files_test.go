@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	gitutils "search-indexer/utils/git"
+	gitutils "haystack/utils/git"
 )
 
 type GitIgnoreFilter struct {

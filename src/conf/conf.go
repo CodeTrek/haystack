@@ -1,12 +1,12 @@
 package conf
 
 import (
+	"haystack/shared/running"
+	fsutils "haystack/utils/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
-	"search-indexer/shared/running"
-	fsutils "search-indexer/utils/fs"
 
 	"gopkg.in/yaml.v3"
 )
@@ -79,7 +79,7 @@ func Get() *Conf {
 
 func Load() error {
 	checkMode()
-	homePath := filepath.Join(running.UserHomeDir(), ".search-indexer")
+	homePath := filepath.Join(running.UserHomeDir(), ".haystack")
 
 	search := []string{
 		"./config.local.yaml",

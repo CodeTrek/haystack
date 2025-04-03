@@ -2,14 +2,14 @@ package indexer
 
 import (
 	"fmt"
+	"haystack/conf"
+	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
+	"haystack/shared/running"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"search-indexer/conf"
-	"search-indexer/server/core/storage"
-	"search-indexer/server/core/workspace"
-	"search-indexer/shared/running"
 	"sort"
 	"sync"
 	"time"

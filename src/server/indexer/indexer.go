@@ -2,10 +2,10 @@ package indexer
 
 import (
 	"fmt"
+	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
 	"log"
 	"os"
-	"search-indexer/server/core/storage"
-	"search-indexer/server/core/workspace"
 	"sync"
 	"time"
 )

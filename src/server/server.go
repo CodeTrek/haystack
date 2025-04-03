@@ -2,14 +2,14 @@ package server
 
 import (
 	"fmt"
+	"haystack/conf"
+	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
+	"haystack/server/indexer"
+	"haystack/server/searcher"
+	"haystack/server/server"
+	"haystack/shared/running"
 	"log"
-	"search-indexer/conf"
-	"search-indexer/server/core/storage"
-	"search-indexer/server/core/workspace"
-	"search-indexer/server/indexer"
-	"search-indexer/server/searcher"
-	"search-indexer/server/server"
-	"search-indexer/shared/running"
 	"sync"
 )
 

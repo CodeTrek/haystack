@@ -1,11 +1,11 @@
 package searcher
 
 import (
+	"haystack/server/core/storage"
+	"haystack/server/indexer"
+	"haystack/shared/requests"
+	"haystack/shared/running"
 	"log"
-	"search-indexer/server/core/storage"
-	"search-indexer/server/indexer"
-	"search-indexer/shared/requests"
-	"search-indexer/shared/running"
 	"sync"
 )
 
@@ -20,11 +20,12 @@ func Run(wg *sync.WaitGroup) {
 	}()
 }
 
-func SearchContent(workspaceId string, query []string) []requests.SearchContentResult {
+// SearchContent searches the content of the workspace
+// query is a list of words to search for
+// returns a list of results
+func SearchContent(workspaceId string, query string) []requests.SearchContentResult {
 	results := []storage.SearchResult{}
-	for _, q := range query {
-		results = append(results, storage.Search(workspaceId, q))
-	}
+	results = append(results, storage.Search(workspaceId, query))
 
 	docIds := results[0].DocIds
 	for _, r := range results[1:] {

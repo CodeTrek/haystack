@@ -3,12 +3,12 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
+	"haystack/conf"
+	"haystack/server/core/storage"
+	"haystack/utils"
 	"log"
 	"os"
 	"path/filepath"
-	"search-indexer/conf"
-	"search-indexer/server/core/storage"
-	"search-indexer/utils"
 	"sync"
 	"time"
 )

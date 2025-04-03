@@ -3,9 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"haystack/server/core/workspace"
+	"haystack/shared/requests"
 	"net/http"
-	"search-indexer/server/core/workspace"
-	"search-indexer/shared/requests"
 )
 
 func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {

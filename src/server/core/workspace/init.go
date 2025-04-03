@@ -2,10 +2,10 @@ package workspace
 
 import (
 	"encoding/json"
+	"haystack/server/core/storage"
+	"haystack/shared/running"
+	"haystack/utils"
 	"log"
-	"search-indexer/server/core/storage"
-	"search-indexer/shared/running"
-	"search-indexer/utils"
 	"sync"
 )
 

@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
-	"strings"
 
-	"search-indexer/server/core/workspace"
-	"search-indexer/server/searcher"
-	"search-indexer/shared/requests"
-	"search-indexer/utils"
+	"haystack/server/core/workspace"
+	"haystack/server/searcher"
+	"haystack/shared/requests"
+	"haystack/utils"
 )
 
 // handleSearchContent handles the search content endpoint
@@ -33,15 +32,19 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Normalize the workspace path
+	// If the path is not absolute, return an error
 	workspacePath := utils.NormalizePath(request.Workspace)
 	if !filepath.IsAbs(workspacePath) {
 		json.NewEncoder(w).Encode(requests.SearchContentResponse{
 			Code:    1,
-			Message: "Workspace path must be absolute",
+			Message: "Workspace is not absolute",
 		})
 		return
 	}
 
+	// Get the workspace by path
+	// If the workspace is not found, return an error
 	workspace, err := workspace.GetByPath(workspacePath)
 	if err != nil {
 		json.NewEncoder(w).Encode(requests.SearchContentResponse{
@@ -51,6 +54,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the query is empty, return an error
 	if request.Query == "" {
 		json.NewEncoder(w).Encode(requests.SearchContentResponse{
 			Code:    1,
@@ -59,8 +63,8 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queries := strings.Split(request.Query, " ")
-	results := searcher.SearchContent(workspace.Meta.ID, queries)
+	// Search the content of the workspace
+	results := searcher.SearchContent(workspace.Meta.ID, request.Query)
 
 	json.NewEncoder(w).Encode(requests.SearchContentResponse{
 		Code:    0,

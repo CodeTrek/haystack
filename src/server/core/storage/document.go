@@ -2,9 +2,9 @@ package storage
 
 import (
 	"fmt"
+	"haystack/server/core/storage/pebble"
+	"haystack/utils"
 	"log"
-	"search-indexer/server/core/storage/pebble"
-	"search-indexer/utils"
 	"sort"
 	"sync"
 	"time"

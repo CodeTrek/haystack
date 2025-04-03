@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"haystack/shared/running"
 	"net/http"
 	"os"
-	"search-indexer/shared/running"
 )
 
 // handleHealth handles the health check endpoint

@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
+	"haystack/conf"
+	"haystack/server"
+	"haystack/shared/running"
 	"log"
 	"os"
 	"path/filepath"
-	"search-indexer/conf"
-	"search-indexer/server"
-	"search-indexer/shared/running"
 )
 
 func main() {

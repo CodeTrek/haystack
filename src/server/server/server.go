@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
+	"haystack/shared/running"
 	"log"
 	"net/http"
-	"search-indexer/shared/running"
 	"sync"
 	"sync/atomic"
 	"time"

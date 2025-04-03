@@ -2,12 +2,12 @@ package storage
 
 import (
 	"context"
+	"haystack/conf"
+	"haystack/server/core/storage/pebble"
+	"haystack/shared/running"
 	"log"
 	"os"
 	"path/filepath"
-	"search-indexer/conf"
-	"search-indexer/server/core/storage/pebble"
-	"search-indexer/shared/running"
 	"sync"
 	"time"
 )

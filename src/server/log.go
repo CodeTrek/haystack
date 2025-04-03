@@ -1,10 +1,10 @@
 package server
 
 import (
+	"haystack/conf"
 	"log"
 	"os"
 	"path/filepath"
-	"search-indexer/conf"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )

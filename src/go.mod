@@ -1,4 +1,4 @@
-module search-indexer
+module haystack
 
 go 1.21.0
 

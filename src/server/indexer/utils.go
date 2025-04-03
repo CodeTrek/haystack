@@ -1,6 +1,6 @@
 package indexer
 
-import "search-indexer/utils"
+import "haystack/utils"
 
 func GetDocumentId(fullPath string) string {
 	return utils.Md5HashString(fullPath)

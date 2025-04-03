@@ -1,10 +1,10 @@
 package indexer
 
 import (
+	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
+	"haystack/shared/running"
 	"log"
-	"search-indexer/server/core/storage"
-	"search-indexer/server/core/workspace"
-	"search-indexer/shared/running"
 	"sync"
 	"time"
 )

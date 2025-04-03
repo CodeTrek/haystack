@@ -6,12 +6,12 @@
 # The application will try to load configuration files in the following order:
 #  - $CWD/config.local.yaml
 #  - $CWD/config.yaml
-#  - $HOME/.search-indexer/config.yaml
+#  - $HOME/.haystack/config.yaml
 #
 # Copy the file to one of the above place.
 
 global:
-  home_path: # the path to store the database files, default is $HOME/.search-indexer/index
+  home_path: # the path to store the database files, default is $HOME/.haystack/index
 
 client:
   # client mode specific configuration

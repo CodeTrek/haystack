@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"search-indexer/utils/git"
+	gitutils "haystack/utils/git"
 )
 
 type SimpleFilter struct {
