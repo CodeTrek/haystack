@@ -10,14 +10,12 @@ This document describes the search query syntax used in our search system. The s
 |----------|--------|-------------|---------------|
 | AND      | `AND` or space | Matches documents containing all specified terms | `cat AND dog` or `cat dog` |
 | OR       | `OR` or `\|` | Matches documents containing any of the specified terms | `cat OR dog` or `cat \| dog` |
-| NOT      | `NOT` or `!` | Excludes documents containing the specified term | `cat NOT dog` or `cat AND !dog` |
-| Grouping | `()` | Groups terms for complex logical expressions | `(cat OR dog) AND mouse` |
 
 ## Search Term Formats
 
 ### 1. Basic Terms
 - **Single Word**: `hello`
-- [TBD] **Phrase Search**: `"hello world"` (use double quotes for exact phrase matching)
+- **Phrase Search**: `"hello world"` (use double quotes for exact phrase matching)
 - **Case Sensitivity**: Search is case-insensitive by default
 
 ### 2. Wildcard Matching
@@ -31,8 +29,6 @@ This document describes the search query syntax used in our search system. The s
 
 ### 3. Special Characters
 - **Quotes**: `"exact phrase"` for exact matching
-- **Parentheses**: `()` for grouping
-- **Escape Character**: Use `\` to escape special characters
 
 ## Examples
 
@@ -41,23 +37,17 @@ This document describes the search query syntax used in our search system. The s
 - `"hello world"` → matches: "hello world" (exact phrase only)
 
 ### 2. AND Search
-- `cat dog` → matches documents containing both "cat" and "dog"
+- `cat dog` → matches line containing both "cat" and "dog"
 - `cat* AND dog*` → matches: "cat dog", "cats dogs", "catalog doggy"
-- `"cat food" AND "dog food"` → matches documents containing both exact phrases
+- `"cat food" AND "dog food"` → matches line containing both exact phrases
 
 ### 3. OR Search
-- `cat OR dog` → matches documents containing either "cat" or "dog"
+- `cat OR dog` → matches line containing either "cat" or "dog"
 - `cat* OR dog*` → matches: "cat", "cats", "dog", "dogs"
-- `(cat OR dog) AND food` → matches: "cat food", "dog food"
 
 ### 4. NOT Search
-- `cat NOT dog` → matches documents with "cat" but not "dog"
+- `cat NOT dog` → matches line with "cat" but not "dog"
 - `cat AND NOT dog` → same as above
-- `(cat OR dog) AND NOT mouse` → matches documents with "cat" or "dog" but not "mouse"
-
-### 5. Complex Expressions
-- `(cat OR dog) AND (food OR treat)` → matches: "cat food", "dog treat", "cat treat"
-- `(cat* OR dog*) AND NOT (mouse OR rat)` → matches documents with words starting with "cat" or "dog" but not containing "mouse" or "rat"
 
 ## Performance Tips
 
@@ -74,30 +64,16 @@ This document describes the search query syntax used in our search system. The s
    - Use phrase search for exact matches
    - Example: `"cat food"` instead of `cat AND food`
 
-4. **Grouping**
-   - Use parentheses to make complex queries more efficient
-   - Example: `(cat OR dog) AND (food OR treat)`
-
 ## Common Use Cases
 
-### 1. Finding Related Documents
-```
-(cat OR dog) AND (food OR treat) AND NOT (mouse OR rat)
-```
-
-### 2. Exact Phrase Matching
+### 1. Exact Phrase Matching
 ```
 "cat food" AND "dog food"
 ```
 
-### 3. Wildcard Search
+### 2. Wildcard Search
 ```
 cat* AND food*
-```
-
-### 4. Excluding Specific Terms
-```
-animal AND NOT (mouse OR rat)
 ```
 
 ## Troubleshooting
