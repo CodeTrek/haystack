@@ -1,6 +1,8 @@
 package searcher
 
 import (
+	"haystack/server/core/storage"
+
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 )
@@ -76,6 +78,26 @@ func ParseQuery(query string) (*Query, error) {
 // processQuery post-processes the parsed query
 func processQuery(q *Query) {
 	// Post-processing logic if needed
+}
+
+// SearchFiles searches the files in the workspace
+// input is the search result from the previous query
+// returns the search result for the current query
+func (q *Query) SearchFiles() (*storage.SearchResult, error) {
+	result := &storage.SearchResult{}
+	return q.Expression.SearchFiles(result)
+}
+
+func (o *OrExpression) SearchFiles(input *storage.SearchResult) (*storage.SearchResult, error) {
+	return input, nil
+}
+
+func (a *AndExpression) SearchFiles(input *storage.SearchResult) *storage.SearchResult {
+	return nil
+}
+
+func (t *Term) SearchFiles(input *storage.SearchResult) *storage.SearchResult {
+	return nil
 }
 
 // String returns the string representation of the query

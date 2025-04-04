@@ -126,7 +126,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 // parseString extracts unique words from a string
 func parseString(str string) []string {
-	re := regexp.MustCompile(`[a-zA-Z0-9]+`)
+	re := regexp.MustCompile(`[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 	words := re.FindAllString(str, -1)
 
 	uniqueWords := make(map[string]struct{})
