@@ -66,9 +66,9 @@ func (w *Writer) processDocs(docs []*WriteDoc) {
 	existingDocs := make(map[string][]*storage.Document)
 	for _, doc := range docs {
 		if doc.CreateNew {
-			newDocs[doc.Workspace.Meta.ID] = append(newDocs[doc.Workspace.Meta.ID], doc.Document)
+			newDocs[doc.Workspace.ID] = append(newDocs[doc.Workspace.ID], doc.Document)
 		} else {
-			existingDocs[doc.Workspace.Meta.ID] = append(existingDocs[doc.Workspace.Meta.ID], doc.Document)
+			existingDocs[doc.Workspace.ID] = append(existingDocs[doc.Workspace.ID], doc.Document)
 		}
 	}
 

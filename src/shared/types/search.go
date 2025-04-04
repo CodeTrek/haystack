@@ -1,9 +1,14 @@
-package requests
+package types
 
-type SearchContentLimit struct {
-	MaxLines        int `json:"max_lines,omitempty"`
-	MaxFiles        int `json:"max_files,omitempty"`
-	MaxLinesPerFile int `json:"max_lines_per_file,omitempty"`
+type SearchLimit struct {
+	MaxResults        int `yaml:"max_results" json:"max_results,omitempty"`
+	MaxResultsPerFile int `yaml:"max_results_per_file" json:"max_results_per_file,omitempty"`
+}
+
+type SearchFilters struct {
+	Path    string `json:"path,omitempty"`
+	Include string `json:"include,omitempty"`
+	Exclude string `json:"exclude,omitempty"`
 }
 
 // SearchContentRequest is the request for searching the content of a workspace
@@ -18,14 +23,16 @@ type SearchContentLimit struct {
 // @param Limit.MaxFiles: is the max files to apply to the search
 // @param Limit.MaxLinesPerFile: is the max lines per file to apply to the search
 type SearchContentRequest struct {
-	Workspace string `json:"workspace,omitempty"`
-	Query     string `json:"query,omitempty"`
-	Filters   struct {
-		Path    string `json:"path,omitempty"`
-		Include string `json:"include,omitempty"`
-		Exclude string `json:"exclude,omitempty"`
-	} `json:"filters,omitempty"`
-	Limit SearchContentLimit `json:"limit,omitempty"`
+	Workspace string         `json:"workspace,omitempty"`
+	Query     string         `json:"query,omitempty"`
+	Filters   *SearchFilters `json:"filters,omitempty"`
+	Limit     *SearchLimit   `json:"limit,omitempty"`
+}
+
+type LineMatch struct {
+	Before []SearchContentLine `json:"before,omitempty"`
+	Line   SearchContentLine   `json:"line"`
+	After  []SearchContentLine `json:"after,omitempty"`
 }
 
 type SearchContentLine struct {
@@ -34,8 +41,8 @@ type SearchContentLine struct {
 }
 
 type SearchContentResult struct {
-	File  string              `json:"file"`
-	Lines []SearchContentLine `json:"lines,omitempty"`
+	File  string      `json:"file"`
+	Lines []LineMatch `json:"lines,omitempty"`
 }
 
 type SearchContentResponse struct {

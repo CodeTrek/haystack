@@ -127,6 +127,7 @@ func TestGitIgnoreSystem(t *testing.T) {
 		"subdir1/subsubdir",
 		"subdir2",
 		"subdir2/ignored_dir",
+		"subdir2/ignored_dir/subdir",
 	}
 
 	for _, dir := range dirs {
@@ -147,6 +148,7 @@ func TestGitIgnoreSystem(t *testing.T) {
 		"subdir2/file3.txt",
 		"subdir2/should_ignore.log",
 		"subdir2/ignored_dir/ignored_file.txt",
+		"subdir2/ignored_dir/subdir/deep_file.txt",
 	}
 
 	for _, file := range files {
@@ -205,6 +207,8 @@ ignored_dir/
 		// 目录规则测试
 		{"ignored dir ignored", "subdir2/ignored_dir", true, true},
 		{"file in ignored dir ignored", "subdir2/ignored_dir/ignored_file.txt", false, true},
+		{"dir in ignored dir ignored", "subdir2/ignored_dir/subdir", true, true},
+		{"deep file in ignored dir ignored", "subdir2/ignored_dir/subdir/deep_file.txt", false, true},
 
 		// 边界情况测试
 		{"non-existent file", "non_existent.txt", false, false},

@@ -62,7 +62,7 @@ func (s *Scanner) run(wg *sync.WaitGroup) {
 
 		s.setCurrent(workspace)
 		if err := s.processWorkspace(workspace); err != nil {
-			log.Printf("Error scanning workspace %s: %v", workspace.Meta.Path, err)
+			log.Printf("Error scanning workspace %s: %v", workspace.Path, err)
 		} else {
 			workspace.UpdateLastFullSync()
 			workspace.Save()
@@ -73,15 +73,15 @@ func (s *Scanner) run(wg *sync.WaitGroup) {
 
 // processWorkspace processes a single workspace by scanning its files and applying filters.
 func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
-	log.Printf("Start processing workspace %s", w.Meta.Path)
+	log.Printf("Start processing workspace %s", w.Path)
 	start := time.Now()
 	fileCount := 0
 	interrupted := false
 	defer func() {
-		log.Printf("Finished processing workspace %s, cost %s, %d files, interrupted: %t", w.Meta.Path, time.Since(start), fileCount, interrupted)
+		log.Printf("Finished processing workspace %s, cost %s, %d files, interrupted: %t", w.Path, time.Since(start), fileCount, interrupted)
 	}()
 
-	baseDir := w.Meta.Path
+	baseDir := w.Path
 	filters := w.GetFilters()
 
 	var exclude fsutils.ListFileFilter
@@ -107,7 +107,7 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {
-			log.Printf("Scanning %s, %d files found, elapsed %s", w.Meta.Path, fileCount, time.Since(startTime))
+			log.Printf("Scanning %s, %d files found, elapsed %s", w.Path, fileCount, time.Since(startTime))
 			lastTime = time.Now()
 		}
 

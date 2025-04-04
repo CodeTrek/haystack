@@ -12,7 +12,8 @@ import (
 type GitIgnore struct {
 	rootPath  string
 	ruleFiles map[string]*GitIgnoreRules
-	mutex     sync.RWMutex // Mutex to protect shared data
+	cache     map[string]bool // Cache for directory paths only
+	mutex     sync.RWMutex    // Mutex to protect shared data
 }
 
 // GitIgnoreRules represents a single .gitignore file
@@ -56,9 +57,15 @@ func NewGitIgnoreRulesFromString(rules string, baseDir string) (*GitIgnoreRules,
 
 // NewGitIgnore creates a new GitIgnore system
 func NewGitIgnore(rootPath string) *GitIgnore {
+	rootPath = filepath.Clean(rootPath)
+	if !filepath.IsAbs(rootPath) {
+		return nil
+	}
+
 	ignorer := &GitIgnore{
 		rootPath:  rootPath,
 		ruleFiles: make(map[string]*GitIgnoreRules),
+		cache:     make(map[string]bool),
 		mutex:     sync.RWMutex{},
 	}
 
@@ -92,8 +99,29 @@ func (f *GitIgnoreRules) IsIgnored(path string, isDir bool) bool {
 	return ignored
 }
 
+var outOfRoot = filepath.Clean("../")
+
 // IsIgnored checks if a path should be ignored by considering all applicable .gitignore rules
 func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
+	relPath = filepath.Clean(relPath)
+	if relPath == "." || relPath == "" || strings.HasPrefix(relPath, outOfRoot) {
+		return false
+	}
+
+	// Only cache directory results
+	var cacheKey string
+	if isDir {
+		cacheKey = relPath
+
+		// Check cache first for directories
+		g.mutex.RLock()
+		if result, exists := g.cache[cacheKey]; exists {
+			g.mutex.RUnlock()
+			return result
+		}
+		g.mutex.RUnlock()
+	}
+
 	baseName := filepath.Base(relPath)
 	if isDir && baseName == ".git" {
 		return true
@@ -103,6 +131,9 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 
 	// Convert the relative path to absolute
 	absPath := filepath.Join(g.rootPath, relPath)
+	if absPath == g.rootPath {
+		return false
+	}
 
 	// Start with the directory containing the file/dir
 	dirPath := absPath
@@ -120,32 +151,31 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 	// Add the root directory last (least specific)
 	dirsToCheck = append(dirsToCheck, g.rootPath)
 
-	/*
-		// Check if parent directory is ignored
-		if !isDir {
-			parentDir := filepath.Dir(absPath)
-			if parentDir != g.rootPath {
-				parentRelPath, err := filepath.Rel(g.rootPath, parentDir)
-				if err == nil {
-					// If parent directory is ignored, files within it are also ignored
-					if g.IsIgnored(parentRelPath, true) {
-						return true
-					}
-				}
-			}
-		}
-	*/
-
 	// First check for negation rules (these have highest precedence)
 	for _, dir := range dirsToCheck {
 		if ruleFile := g.loadGitIgnoreForDir(dir); ruleFile != nil {
 			// Check if there's an explicit negation rule for this file
 			if ruleFile.isNegated(absPath, isDir) {
+				if isDir {
+					g.cacheResult(cacheKey, false)
+				}
 				return false
 			}
 
 			if ruleFile.isGitRoot {
 				break
+			}
+		}
+	}
+
+	// Check if parent directory is ignored
+	parentDir := filepath.Dir(absPath)
+	if parentDir != g.rootPath {
+		parentRelPath, err := filepath.Rel(g.rootPath, parentDir)
+		if err == nil {
+			// If parent directory is ignored, files within it are also ignored
+			if g.IsIgnored(parentRelPath, true) {
+				return true
 			}
 		}
 	}
@@ -158,11 +188,32 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 
 		if exists && ruleFile != nil {
 			if ruleFile.IsIgnored(absPath, isDir) {
+				if isDir {
+					g.cacheResult(cacheKey, true)
+				}
 				return true
 			}
 		}
 	}
+
+	if isDir {
+		g.cacheResult(cacheKey, false)
+	}
 	return false
+}
+
+// cacheResult stores a directory result in the cache
+func (g *GitIgnore) cacheResult(key string, ignored bool) {
+	g.mutex.Lock()
+	g.cache[key] = ignored
+	g.mutex.Unlock()
+}
+
+// ClearCache clears the directory path cache
+func (g *GitIgnore) ClearCache() {
+	g.mutex.Lock()
+	g.cache = make(map[string]bool)
+	g.mutex.Unlock()
 }
 
 // isIgnored checks if a path matches this rule
@@ -337,6 +388,10 @@ func parseRule(pattern string) gitIgnoreRule {
 
 // isNegated checks if a path has an explicit negation rule
 func (f *GitIgnoreRules) isNegated(path string, isDir bool) bool {
+	if len(f.rules) == 0 {
+		return false
+	}
+
 	// Get the path relative to the base directory
 	relPath, err := filepath.Rel(f.baseDir, path)
 	if err != nil {

@@ -27,6 +27,10 @@ func (f *SimpleFilter) Match(path string, isDir bool) bool {
 }
 
 func NewSimpleFilterExclude(patterns []string, baseDir string) *SimpleFilter {
+	if !filepath.IsAbs(baseDir) {
+		return nil
+	}
+
 	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir)
 	return &SimpleFilter{
 		rootPath: baseDir,
@@ -36,6 +40,10 @@ func NewSimpleFilterExclude(patterns []string, baseDir string) *SimpleFilter {
 }
 
 func NewSimpleFilter(patterns []string, baseDir string) *SimpleFilter {
+	if !filepath.IsAbs(baseDir) {
+		return nil
+	}
+
 	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir)
 	return &SimpleFilter{
 		rootPath: baseDir,

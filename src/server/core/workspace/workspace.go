@@ -17,7 +17,7 @@ var mutex sync.Mutex
 var workspaces map[string]*Workspace
 var workspacePaths map[string]*Workspace
 
-type Meta struct {
+type Workspace struct {
 	ID               string        `json:"id"`
 	Path             string        `json:"path"`
 	UseGlobalFilters bool          `json:"use_global_filters"`
@@ -26,15 +26,11 @@ type Meta struct {
 	CreatedAt    time.Time `json:"created_time"`
 	LastAccessed time.Time `json:"last_accessed_time"`
 	LastFullSync time.Time `json:"last_full_sync_time"`
-}
-
-type Workspace struct {
-	Meta Meta
 
 	Indexing *time.Time `json:"-"`
 	Deleted  bool       `json:"-"`
 
-	Mutex sync.Mutex
+	Mutex sync.Mutex `json:"-"`
 }
 
 func GetAll() []string {
@@ -43,7 +39,7 @@ func GetAll() []string {
 
 	result := []string{}
 	for _, workspace := range workspaces {
-		result = append(result, workspace.Meta.Path)
+		result = append(result, workspace.Path)
 	}
 
 	return result
@@ -79,24 +75,24 @@ func (w *Workspace) Save() error {
 		return err
 	}
 
-	return storage.SaveWorkspace(w.Meta.ID, string(json))
+	return storage.SaveWorkspace(w.ID, string(json))
 }
 
 func (w *Workspace) UpdateLastFullSync() {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 
-	w.Meta.LastFullSync = time.Now()
+	w.LastFullSync = time.Now()
 }
 
 func (w *Workspace) GetFilters() conf.Filters {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
-	if w.Meta.Filters == nil || w.Meta.UseGlobalFilters {
+	if w.Filters == nil || w.UseGlobalFilters {
 		return conf.Get().Server.Filters
 	}
 
-	return *w.Meta.Filters
+	return *w.Filters
 }
 
 func (w *Workspace) Delete() error {
@@ -104,8 +100,8 @@ func (w *Workspace) Delete() error {
 	defer w.Mutex.Unlock()
 
 	w.Deleted = true
-	delete(workspaces, w.Meta.ID)
-	delete(workspacePaths, w.Meta.Path)
+	delete(workspaces, w.ID)
+	delete(workspacePaths, w.Path)
 
 	// TODO: Delete index
 	return nil
@@ -153,13 +149,11 @@ func GetOrCreate(workspacePath string) (*Workspace, error) {
 		}
 
 		workspace = &Workspace{
-			Meta: Meta{
-				ID:               id,
-				Path:             workspacePath,
-				UseGlobalFilters: true,
-				CreatedAt:        time.Now(),
-				LastAccessed:     time.Now(),
-			},
+			ID:               id,
+			Path:             workspacePath,
+			UseGlobalFilters: true,
+			CreatedAt:        time.Now(),
+			LastAccessed:     time.Now(),
 		}
 
 		if err := workspace.Save(); err != nil {
@@ -179,5 +173,5 @@ func (w *Workspace) serialize() ([]byte, error) {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 
-	return json.Marshal(w.Meta)
+	return json.Marshal(w)
 }

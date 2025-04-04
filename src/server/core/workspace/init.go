@@ -21,14 +21,14 @@ func Init(wg *sync.WaitGroup) error {
 	}
 
 	for _, workspace := range allWorkspaces {
-		space := Meta{
+		space := Workspace{
 			ID:               workspace[0],
 			UseGlobalFilters: true,
 		}
 
 		if err := json.Unmarshal([]byte(workspace[1]), &space); err == nil {
 			space.Path = utils.NormalizePath(space.Path)
-			workspaces[space.ID] = &Workspace{Meta: space}
+			workspaces[space.ID] = &space
 			workspacePaths[space.Path] = workspaces[space.ID]
 			log.Printf("Found workspace: %v, path: %v", space.ID, space.Path)
 		} else {

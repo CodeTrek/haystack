@@ -2,6 +2,7 @@ package conf
 
 import (
 	"haystack/shared/running"
+	"haystack/shared/types"
 	fsutils "haystack/utils/fs"
 	"log"
 	"os"
@@ -16,9 +17,8 @@ const (
 	DefaultIndexWorkers = 4
 	DefaultPort         = 13134
 
-	DefaultMaxSearchLines        = 100000
-	DefaultMaxSearchFiles        = 1000
-	DefaultMaxSearchLinesPerFile = 1000
+	DefaultMaxResults        = 10000
+	DefaultMaxResultsPerFile = 1000
 )
 
 type Exclude struct {
@@ -31,12 +31,6 @@ type Filters struct {
 	Include []string `yaml:"include" optional:"true" json:"include"`
 }
 
-type SearchLimit struct {
-	MaxLines        int `yaml:"max_lines" json:"max_lines,omitempty"`
-	MaxFiles        int `yaml:"max_files" json:"max_files,omitempty"`
-	MaxLinesPerFile int `yaml:"max_lines_per_file" json:"max_lines_per_file,omitempty"`
-}
-
 type Global struct {
 	HomePath string `yaml:"home_path"`
 	Port     int    `yaml:"port"`
@@ -46,10 +40,10 @@ type Client struct {
 }
 
 type Server struct {
-	MaxFileSize  int64       `yaml:"max_file_size"`
-	IndexWorkers int         `yaml:"index_workers"`
-	Filters      Filters     `yaml:"filters"`
-	SearchLimit  SearchLimit `yaml:"search_limit"`
+	MaxFileSize  int64             `yaml:"max_file_size"`
+	IndexWorkers int               `yaml:"index_workers"`
+	Filters      Filters           `yaml:"filters"`
+	SearchLimit  types.SearchLimit `yaml:"search_limit"`
 
 	LoggingStdout bool `yaml:"logging_stdout"`
 }
@@ -105,10 +99,9 @@ func Load() error {
 		Server: Server{
 			MaxFileSize:  DefaultMaxFileSize,
 			IndexWorkers: DefaultIndexWorkers,
-			SearchLimit: SearchLimit{
-				MaxLines:        DefaultMaxSearchLines,
-				MaxFiles:        DefaultMaxSearchFiles,
-				MaxLinesPerFile: DefaultMaxSearchLinesPerFile,
+			SearchLimit: types.SearchLimit{
+				MaxResults:        DefaultMaxResults,
+				MaxResultsPerFile: DefaultMaxResultsPerFile,
 			},
 		},
 	}
@@ -141,16 +134,12 @@ func Load() error {
 		conf.Global.Port = DefaultPort
 	}
 
-	if conf.Server.SearchLimit.MaxLines <= 0 || conf.Server.SearchLimit.MaxLines > DefaultMaxSearchLines {
-		conf.Server.SearchLimit.MaxLines = DefaultMaxSearchLines
+	if conf.Server.SearchLimit.MaxResults <= 0 || conf.Server.SearchLimit.MaxResults > DefaultMaxResults {
+		conf.Server.SearchLimit.MaxResults = DefaultMaxResults
 	}
 
-	if conf.Server.SearchLimit.MaxFiles <= 0 || conf.Server.SearchLimit.MaxFiles > DefaultMaxSearchFiles {
-		conf.Server.SearchLimit.MaxFiles = DefaultMaxSearchFiles
-	}
-
-	if conf.Server.SearchLimit.MaxLinesPerFile <= 0 || conf.Server.SearchLimit.MaxLinesPerFile > DefaultMaxSearchLinesPerFile {
-		conf.Server.SearchLimit.MaxLinesPerFile = DefaultMaxSearchLinesPerFile
+	if conf.Server.SearchLimit.MaxResultsPerFile <= 0 || conf.Server.SearchLimit.MaxResultsPerFile > DefaultMaxResultsPerFile {
+		conf.Server.SearchLimit.MaxResultsPerFile = DefaultMaxResultsPerFile
 	}
 
 	return nil

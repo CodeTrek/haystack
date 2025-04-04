@@ -41,8 +41,8 @@ func SyncIfNeeded(workspacePath string) error {
 		return fmt.Errorf("failed to get or create workspace: %v", err)
 	}
 
-	if workspace.Meta.LastFullSync.IsZero() ||
-		workspace.Meta.LastFullSync.Before(time.Now().Add(-time.Hour*24)) {
+	if workspace.LastFullSync.IsZero() ||
+		workspace.LastFullSync.Before(time.Now().Add(-time.Hour*24)) {
 		if err := scanner.Add(workspace); err != nil {
 			return fmt.Errorf("failed to add workspace to scanner queue: %v", err)
 		}
@@ -61,7 +61,7 @@ func RemoveFile(workspace *workspace.Workspace, filePath string) error {
 	// TODO: Implement
 	docid := GetDocumentId(filePath)
 
-	storage.DeleteDocument(workspace.Meta.ID, docid)
+	storage.DeleteDocument(workspace.ID, docid)
 	return nil
 }
 

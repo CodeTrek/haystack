@@ -7,14 +7,14 @@ import (
 
 	"haystack/server/core/workspace"
 	"haystack/server/searcher"
-	"haystack/shared/requests"
+	"haystack/shared/types"
 	"haystack/utils"
 )
 
 // handleSearchContent handles the search content endpoint
 // It will search the content of the server
 func handleSearchContent(w http.ResponseWriter, r *http.Request) {
-	var request requests.SearchContentRequest
+	var request types.SearchContentRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -25,7 +25,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if request.Workspace == "" {
-		json.NewEncoder(w).Encode(requests.SearchContentResponse{
+		json.NewEncoder(w).Encode(types.SearchContentResponse{
 			Code:    1,
 			Message: "Workspace is required",
 		})
@@ -36,7 +36,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 	// If the path is not absolute, return an error
 	workspacePath := utils.NormalizePath(request.Workspace)
 	if !filepath.IsAbs(workspacePath) {
-		json.NewEncoder(w).Encode(requests.SearchContentResponse{
+		json.NewEncoder(w).Encode(types.SearchContentResponse{
 			Code:    1,
 			Message: "Workspace is not absolute",
 		})
@@ -47,7 +47,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 	// If the workspace is not found, return an error
 	workspace, err := workspace.GetByPath(workspacePath)
 	if err != nil {
-		json.NewEncoder(w).Encode(requests.SearchContentResponse{
+		json.NewEncoder(w).Encode(types.SearchContentResponse{
 			Code:    1,
 			Message: err.Error(),
 		})
@@ -56,7 +56,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 
 	// If the query is empty, return an error
 	if request.Query == "" {
-		json.NewEncoder(w).Encode(requests.SearchContentResponse{
+		json.NewEncoder(w).Encode(types.SearchContentResponse{
 			Code:    1,
 			Message: "Query is required",
 		})
@@ -64,13 +64,13 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Search the content of the workspace
-	results := searcher.SearchContent(workspace.Meta.ID, request.Query)
+	results := searcher.SearchContent(workspace, request.Query, request.Filters, request.Limit)
 
-	json.NewEncoder(w).Encode(requests.SearchContentResponse{
+	json.NewEncoder(w).Encode(types.SearchContentResponse{
 		Code:    0,
 		Message: "Ok",
 		Data: struct {
-			Results []requests.SearchContentResult `json:"results,omitempty"`
+			Results []types.SearchContentResult `json:"results,omitempty"`
 		}{
 			Results: results,
 		},

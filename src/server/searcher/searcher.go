@@ -2,9 +2,11 @@ package searcher
 
 import (
 	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
 	"haystack/server/indexer"
-	"haystack/shared/requests"
 	"haystack/shared/running"
+	"haystack/shared/types"
+	"haystack/utils"
 	"log"
 	"sync"
 )
@@ -20,12 +22,21 @@ func Run(wg *sync.WaitGroup) {
 	}()
 }
 
+type QueryFilters struct {
+	Path    string
+	Include *utils.SimpleFilter
+	Exclude *utils.SimpleFilter
+}
+
 // SearchContent searches the content of the workspace
 // query is a list of words to search for
 // returns a list of results
-func SearchContent(workspaceId string, query string) []requests.SearchContentResult {
+func SearchContent(workspace *workspace.Workspace, query string,
+	filters *types.SearchFilters,
+	limit *types.SearchLimit) []types.SearchContentResult {
+
 	results := []storage.SearchResult{}
-	results = append(results, storage.Search(workspaceId, query))
+	results = append(results, storage.Search(workspace.ID, query))
 
 	docIds := results[0].DocIds
 	for _, r := range results[1:] {
@@ -37,22 +48,20 @@ func SearchContent(workspaceId string, query string) []requests.SearchContentRes
 	}
 
 	docs := map[string]*storage.Document{}
-	docPaths := []string{}
 	for docid := range docIds {
-		doc, err := storage.GetDocument(workspaceId, docid, false)
+		doc, err := storage.GetDocument(workspace.ID, docid, false)
 		if err != nil {
 			continue
 		}
 		docs[docid] = doc
-		docPaths = append(docPaths, doc.FullPath)
 	}
 
-	indexer.RefreshFileIfNeeded(workspaceId, docs)
+	indexer.RefreshFileIfNeeded(workspace.ID, docs)
 
 	// TODO: Add lines to the results
-	finalResults := []requests.SearchContentResult{}
+	finalResults := []types.SearchContentResult{}
 	for _, doc := range docs {
-		finalResults = append(finalResults, requests.SearchContentResult{
+		finalResults = append(finalResults, types.SearchContentResult{
 			File: doc.FullPath,
 		})
 	}

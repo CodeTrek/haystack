@@ -85,7 +85,7 @@ func (p *Parser) Add(workspace *workspace.Workspace, filePath string) {
 
 // parse reads and processes a file, returning a Document
 func parse(file ParseFile) (*storage.Document, bool, error) {
-	fullPath := filepath.Join(file.Workspace.Meta.Path, file.FilePath)
+	fullPath := filepath.Join(file.Workspace.Path, file.FilePath)
 
 	info, err := os.Stat(fullPath)
 	if err != nil {
@@ -94,7 +94,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	id := GetDocumentId(fullPath)
 
-	existing, _ := storage.GetDocument(file.Workspace.Meta.ID, id, false)
+	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
 
 	// If the document exists and the modified time is the same, return nil
 	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() {
