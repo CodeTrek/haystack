@@ -2,6 +2,7 @@ package searcher
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 )
 
@@ -15,7 +16,10 @@ type SimpleOrClause struct {
 
 type SimplePattern struct {
 	Pattern string
+	Prefix  string
 }
+
+var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 
 func ParseQuerySimple(query string) (*SimpleQuery, error) {
 	query = strings.TrimSpace(query)
@@ -33,12 +37,17 @@ func ParseQuerySimple(query string) (*SimpleQuery, error) {
 		andPatterns := []*SimplePattern{}
 		for _, andPattern := range strings.Split(orClause, " ") {
 			andPattern = strings.TrimSpace(andPattern)
-			if andPattern == "" {
+			if andPattern == "" || andPattern == "AND" {
 				continue
 			}
-			andPatterns = append(andPatterns, &SimplePattern{
-				Pattern: andPattern,
-			})
+
+			prefixes := rePrefix.FindAllString(andPattern, 1)
+			if len(prefixes) > 0 {
+				andPatterns = append(andPatterns, &SimplePattern{
+					Pattern: andPattern,
+					Prefix:  prefixes[0],
+				})
+			}
 		}
 
 		if len(andPatterns) == 0 {

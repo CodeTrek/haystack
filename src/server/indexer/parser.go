@@ -124,9 +124,10 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 	}, existing == nil, nil
 }
 
+var re = regexp.MustCompile(`[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
+
 // parseString extracts unique words from a string
 func parseString(str string) []string {
-	re := regexp.MustCompile(`[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 	words := re.FindAllString(str, -1)
 
 	uniqueWords := make(map[string]struct{})
@@ -152,7 +153,7 @@ func isValidWord(word string) bool {
 	}
 
 	for _, r := range word {
-		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9') {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_') {
 			return false
 		}
 	}
