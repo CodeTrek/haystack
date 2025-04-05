@@ -82,6 +82,7 @@ func (w *Workspace) UpdateLastFullSync() {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 
+	w.Indexing = nil
 	w.LastFullSync = time.Now()
 }
 

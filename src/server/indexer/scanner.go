@@ -150,6 +150,15 @@ func (s *Scanner) Add(w *workspace.Workspace) error {
 		return fmt.Errorf("cannot add nil workspace to scanner queue")
 	}
 
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+	if w.Indexing != nil {
+		return fmt.Errorf("workspace is already being indexed")
+	}
+
+	now := time.Now()
+	w.Indexing = &now
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.queue.PushBack(w)

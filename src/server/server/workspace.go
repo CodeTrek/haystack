@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"haystack/server/core/workspace"
+	"haystack/server/indexer"
 	"haystack/shared/types"
 	"net/http"
 )
@@ -28,7 +29,7 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = workspace.GetOrCreate(request.Path)
+	ws, err = workspace.GetOrCreate(request.Path)
 	if err != nil {
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,
@@ -36,6 +37,8 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	indexer.SyncIfNeeded(ws.Path)
 
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,

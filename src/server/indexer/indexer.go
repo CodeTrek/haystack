@@ -27,8 +27,18 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Indexer started.")
 }
 
-func CreateWorkspace(workspacePath string) error {
-	return SyncIfNeeded(workspacePath)
+func RestoreIndexingIfNeeded() {
+	workspacePaths := workspace.GetAll()
+	for _, w := range workspacePaths {
+		workspace, err := workspace.GetByPath(w)
+		if err != nil {
+			continue
+		}
+
+		if workspace.LastFullSync.IsZero() {
+			SyncIfNeeded(workspace.Path)
+		}
+	}
 }
 
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
