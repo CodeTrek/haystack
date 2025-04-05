@@ -1,4 +1,4 @@
-package requests
+package types
 
 type CreateWorkspaceRequest struct {
 	Path string `json:"path"`

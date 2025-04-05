@@ -65,20 +65,29 @@ func RemoveFile(workspace *workspace.Workspace, filePath string) error {
 	return nil
 }
 
-func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) error {
+func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) []string {
 	workspace, err := workspace.Get(workspaceId)
 	if err != nil {
-		return fmt.Errorf("failed to get workspace: %v", err)
+		return []string{}
 	}
 
+	removedDocs := []string{}
 	for _, doc := range docs {
 		stat, err := os.Stat(doc.FullPath)
+
+		// If the file becomes a directory or there is an error, remove it
 		if stat.IsDir() || err != nil {
 			RemoveFile(workspace, doc.FullPath)
+			removedDocs = append(removedDocs, doc.ID)
 			continue
 		}
 
-		parser.Add(workspace, doc.FullPath)
+		// If the file has been modified, add it to the parser queue
+		if stat.ModTime().UnixNano() != doc.ModifiedTime {
+			parser.Add(workspace, doc.FullPath)
+		}
 	}
-	return nil
+
+	// Return the list of removed documents
+	return removedDocs
 }

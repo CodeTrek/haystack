@@ -3,6 +3,8 @@ package searcher
 import (
 	"errors"
 	"haystack/conf"
+	"haystack/server/core/storage"
+	"haystack/server/core/workspace"
 	"haystack/shared/types"
 	"haystack/utils"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 
 type SimpleSearchContent struct {
+	Workspace *workspace.Workspace
 	OrClauses []*SimpleSearchContentOrClause
 	Limit     types.SearchLimit
 	Filters   QueryFilters
@@ -27,7 +30,64 @@ type SimpleSearchContentTerm struct {
 	Prefix  string
 }
 
-func NewSimpleQuery(baseDir string, limit *types.SearchLimit, filter *types.SearchFilters) *SimpleSearchContent {
+func (q *SimpleSearchContent) CollectDocuments() (*storage.SearchResult, error) {
+	rs := []*storage.SearchResult{}
+	// Collect the documents for each or clause
+	for _, orClause := range q.OrClauses {
+		r, err := orClause.CollectDocuments(q.Workspace.ID)
+		if err != nil {
+			continue
+		}
+
+		rs = append(rs, r)
+	}
+
+	if len(rs) == 0 {
+		return &storage.SearchResult{}, nil
+	}
+
+	// Merge the results, we use the first result as the base and merge all other results into it
+	result := rs[0]
+	for _, r := range rs[1:] {
+		for docid := range r.DocIds {
+			result.DocIds[docid] = struct{}{}
+		}
+	}
+
+	return result, nil
+}
+
+func (q *SimpleSearchContentOrClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
+	// Collect the documents for each term
+	rs := []*storage.SearchResult{}
+	for _, term := range q.AndTerms {
+		r := term.CollectDocuments(workspaceId)
+		rs = append(rs, &r)
+	}
+
+	if len(rs) == 0 {
+		return &storage.SearchResult{
+			DocIds: make(map[string]struct{}),
+		}, nil
+	}
+
+	// Merge the results, the documents should match all "AND" terms
+	// We use the first result as the base and remove documents that don't match the other results
+	result := rs[0]
+	for _, r := range rs[1:] {
+		for docid := range r.DocIds {
+			delete(result.DocIds, docid)
+		}
+	}
+
+	return result, nil
+}
+
+func (q *SimpleSearchContentTerm) CollectDocuments(workspaceId string) storage.SearchResult {
+	return storage.Search(workspaceId, q.Prefix, -1)
+}
+
+func NewSimpleSearchContent(workspace *workspace.Workspace, limit *types.SearchLimit, filter *types.SearchFilters) *SimpleSearchContent {
 	queryLimit := conf.Get().Server.SearchLimit
 
 	if limit != nil {
@@ -42,20 +102,23 @@ func NewSimpleQuery(baseDir string, limit *types.SearchLimit, filter *types.Sear
 
 	var includeFilter *utils.SimpleFilter
 	var excludeFilter *utils.SimpleFilter
+	var pathFilter = ""
 	if filter != nil {
+		pathFilter = filepath.Clean(filter.Path)
 		if filter.Include != "" {
-			includeFilter = utils.NewSimpleFilter(strings.Split(filter.Include, ","), baseDir)
+			includeFilter = utils.NewSimpleFilter(strings.Split(filter.Include, ","), workspace.Path)
 		}
 
 		if filter.Exclude != "" {
-			excludeFilter = utils.NewSimpleFilter(strings.Split(filter.Exclude, ","), baseDir)
+			excludeFilter = utils.NewSimpleFilter(strings.Split(filter.Exclude, ","), workspace.Path)
 		}
 	}
 
 	return &SimpleSearchContent{
-		Limit: queryLimit,
+		Workspace: workspace,
+		Limit:     queryLimit,
 		Filters: QueryFilters{
-			Path:    filepath.Clean(filter.Path),
+			Path:    pathFilter,
 			Include: includeFilter,
 			Exclude: excludeFilter,
 		},
@@ -86,7 +149,7 @@ func (q *SimpleSearchContent) Compile(query string) error {
 			if len(prefixes) > 0 {
 				andPatterns = append(andPatterns, &SimpleSearchContentTerm{
 					Pattern: andPattern,
-					Prefix:  prefixes[0],
+					Prefix:  strings.ToLower(prefixes[0]),
 				})
 			}
 		}
@@ -106,12 +169,4 @@ func (q *SimpleSearchContent) Compile(query string) error {
 
 	q.OrClauses = orClauses
 	return nil
-}
-
-func (q *SimpleSearchContent) Run() ([]types.SearchContentResult, error) {
-	return nil, nil
-}
-
-func (q *SimpleSearchContent) CollectFiles() ([]string, error) {
-	return nil, nil
 }

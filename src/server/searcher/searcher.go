@@ -8,6 +8,7 @@ import (
 	"haystack/shared/types"
 	"haystack/utils"
 	"log"
+	"path/filepath"
 	"sync"
 )
 
@@ -35,18 +36,19 @@ func SearchContent(workspace *workspace.Workspace, query string,
 	filters *types.SearchFilters,
 	limit *types.SearchLimit) []types.SearchContentResult {
 
-	results := []storage.SearchResult{}
-	results = append(results, storage.Search(workspace.ID, query))
-
-	docIds := results[0].DocIds
-	for _, r := range results[1:] {
-		for docid := range docIds {
-			if _, ok := r.DocIds[docid]; !ok {
-				delete(docIds, docid)
-			}
-		}
+	search := NewSimpleSearchContent(workspace, limit, filters)
+	err := search.Compile(query)
+	if err != nil {
+		log.Println("Failed to compile query:", err)
+		return []types.SearchContentResult{}
 	}
 
+	results, err := search.CollectDocuments()
+	if err != nil {
+		return []types.SearchContentResult{}
+	}
+
+	docIds := results.DocIds
 	docs := map[string]*storage.Document{}
 	for docid := range docIds {
 		doc, err := storage.GetDocument(workspace.ID, docid, false)
@@ -56,13 +58,20 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		docs[docid] = doc
 	}
 
-	indexer.RefreshFileIfNeeded(workspace.ID, docs)
+	removedDocs := indexer.RefreshFileIfNeeded(workspace.ID, docs)
+	for _, docid := range removedDocs {
+		delete(docs, docid)
+	}
 
 	// TODO: Add lines to the results
 	finalResults := []types.SearchContentResult{}
 	for _, doc := range docs {
+		relPath, err := filepath.Rel(workspace.Path, doc.FullPath)
+		if err != nil {
+			continue
+		}
 		finalResults = append(finalResults, types.SearchContentResult{
-			File: doc.FullPath,
+			File: filepath.Clean(relPath),
 		})
 	}
 
