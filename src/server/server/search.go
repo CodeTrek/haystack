@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"haystack/server/core/workspace"
 	"haystack/server/searcher"
@@ -63,16 +65,28 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start := time.Now()
 	// Search the content of the workspace
-	results := searcher.SearchContent(workspace, request.Query, request.Filters, request.Limit)
+	results, truncate := searcher.SearchContent(workspace, request.Query, request.Filters, request.Limit, request.CaseSensitive)
+	defer func() {
+		totalHits := 0
+		for _, result := range results {
+			totalHits += len(result.Lines)
+		}
+		req, _ := json.Marshal(request)
+		log.Printf("Process /api/v1/search/content `%s`: took %s, found %d results in %d files, truncate: %t",
+			string(req), time.Since(start), totalHits, len(results), truncate)
+	}()
 
 	json.NewEncoder(w).Encode(types.SearchContentResponse{
 		Code:    0,
 		Message: "Ok",
 		Data: struct {
-			Results []types.SearchContentResult `json:"results,omitempty"`
+			Results  []types.SearchContentResult `json:"results,omitempty"`
+			Truncate bool                        `json:"truncate,omitempty"`
 		}{
-			Results: results,
+			Results:  results,
+			Truncate: truncate,
 		},
 	})
 }

@@ -25,7 +25,7 @@ func TestParseQuerySimple(t *testing.T) {
 			name:  "single pattern",
 			query: "test",
 			want: &SimpleContentSearchEngine{
-				OrClauses: []*SimpleContentSearchEngineOrClause{
+				OrClauses: []*SimpleContentSearchEngineAndClause{
 					{
 						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
@@ -41,7 +41,7 @@ func TestParseQuerySimple(t *testing.T) {
 			name:  "multiple AND patterns",
 			query: "test1 test2",
 			want: &SimpleContentSearchEngine{
-				OrClauses: []*SimpleContentSearchEngineOrClause{
+				OrClauses: []*SimpleContentSearchEngineAndClause{
 					{
 						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
@@ -61,7 +61,7 @@ func TestParseQuerySimple(t *testing.T) {
 			name:  "OR clauses",
 			query: "test1 test2 | test3",
 			want: &SimpleContentSearchEngine{
-				OrClauses: []*SimpleContentSearchEngineOrClause{
+				OrClauses: []*SimpleContentSearchEngineAndClause{
 					{
 						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
@@ -89,7 +89,7 @@ func TestParseQuerySimple(t *testing.T) {
 			name:  "pattern with prefix",
 			query: "prefix:value",
 			want: &SimpleContentSearchEngine{
-				OrClauses: []*SimpleContentSearchEngineOrClause{
+				OrClauses: []*SimpleContentSearchEngineAndClause{
 					{
 						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
@@ -105,7 +105,7 @@ func TestParseQuerySimple(t *testing.T) {
 			name:  "complex query with prefixes and OR",
 			query: "field1:value1 field2:value2 | field3:value3",
 			want: &SimpleContentSearchEngine{
-				OrClauses: []*SimpleContentSearchEngineOrClause{
+				OrClauses: []*SimpleContentSearchEngineAndClause{
 					{
 						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
@@ -134,7 +134,7 @@ func TestParseQuerySimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := &SimpleContentSearchEngine{}
-			err := got.Compile(tt.query)
+			err := got.Compile(tt.query, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseQuerySimple() error = %v, wantErr %v", err, tt.wantErr)
 				return

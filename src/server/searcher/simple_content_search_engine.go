@@ -17,18 +17,19 @@ var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 
 type SimpleContentSearchEngine struct {
 	Workspace *workspace.Workspace
-	OrClauses []*SimpleContentSearchEngineOrClause
+	OrClauses []*SimpleContentSearchEngineAndClause
 	Limit     types.SearchLimit
 	Filters   QueryFilters
 }
 
-type SimpleContentSearchEngineOrClause struct {
+type SimpleContentSearchEngineAndClause struct {
 	AndTerms []*SimpleContentSearchEngineTerm
 }
 
 type SimpleContentSearchEngineTerm struct {
 	Pattern string
 	Prefix  string
+	Regex   *regexp.Regexp
 }
 
 func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, error) {
@@ -55,10 +56,14 @@ func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, e
 		}
 	}
 
+	if len(q.OrClauses) > 1 {
+		log.Printf("Merged Documents: ==>`%s` found %d documents", q.String(), len(result.DocIds))
+	}
+
 	return result, nil
 }
 
-func (q *SimpleContentSearchEngineOrClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
+func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
 	// Collect the documents for each term
 	rs := []*storage.SearchResult{}
 	for _, term := range q.AndTerms {
@@ -76,9 +81,15 @@ func (q *SimpleContentSearchEngineOrClause) CollectDocuments(workspaceId string)
 	// We use the first result as the base and remove documents that don't match the other results
 	result := rs[0]
 	for _, r := range rs[1:] {
-		for docid := range r.DocIds {
-			delete(result.DocIds, docid)
+		for docid := range result.DocIds {
+			if _, ok := r.DocIds[docid]; !ok {
+				delete(result.DocIds, docid)
+			}
 		}
+	}
+
+	if len(q.AndTerms) > 1 {
+		log.Printf("Merged Documents: =>`%s` found %d documents", q.String(), len(result.DocIds))
 	}
 
 	return result, nil
@@ -86,7 +97,7 @@ func (q *SimpleContentSearchEngineOrClause) CollectDocuments(workspaceId string)
 
 func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) storage.SearchResult {
 	r := storage.Search(workspaceId, q.Prefix, -1)
-	log.Printf("SimpleContentSearchEngineTerm.CollectDocuments: `%s` found %d documents", q.String(), len(r.DocIds))
+	log.Printf("CollectDocuments: |--`%s` found %d documents", q.String(), len(r.DocIds))
 	return r
 }
 
@@ -130,16 +141,49 @@ func NewSimpleContentSearchEngine(workspace *workspace.Workspace, limit *types.S
 }
 
 func (q *SimpleContentSearchEngine) IsLineMatch(line string) bool {
+	for _, orClause := range q.OrClauses {
+		if orClause.IsLineMatch(line) {
+			return true
+		}
+	}
+
 	return false
 }
 
-func (q *SimpleContentSearchEngine) Compile(query string) error {
+func (q *SimpleContentSearchEngineAndClause) IsLineMatch(line string) bool {
+	if len(q.AndTerms) == 0 {
+		return false
+	}
+
+	// We should match keywords in orders
+	matchIndex := -1
+	for _, term := range q.AndTerms {
+		matchIndex = term.IsLineMatch(line)
+		if matchIndex == -1 {
+			return false
+		}
+		line = line[matchIndex:]
+	}
+
+	return true
+}
+
+func (q *SimpleContentSearchEngineTerm) IsLineMatch(line string) int {
+	match := q.Regex.FindAllStringIndex(line, 1)
+	if len(match) > 0 {
+		return match[0][1]
+	}
+
+	return -1
+}
+
+func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) error {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return errors.New("query is empty")
 	}
 
-	orClauses := []*SimpleContentSearchEngineOrClause{}
+	orClauses := []*SimpleContentSearchEngineAndClause{}
 	for _, orClause := range strings.Split(query, "|") {
 		orClause = strings.TrimSpace(orClause)
 		if orClause == "" {
@@ -155,9 +199,27 @@ func (q *SimpleContentSearchEngine) Compile(query string) error {
 
 			prefixes := rePrefix.FindAllString(andPattern, 1)
 			if len(prefixes) > 0 {
+				regPattern := prefixes[0]
+				regPattern = strings.ReplaceAll(regPattern, ".", "\\.")
+				regPattern = strings.ReplaceAll(regPattern, "*", ".*")
+				regPattern = strings.ReplaceAll(regPattern, "?", ".?")
+				regPattern = strings.ReplaceAll(regPattern, "[", "\\[")
+				regPattern = strings.ReplaceAll(regPattern, "]", "\\]")
+				regPattern = strings.ReplaceAll(regPattern, "^", "\\^")
+				regPattern = strings.ReplaceAll(regPattern, "$", "\\$")
+				casePattern := ""
+				if !caseSensitive {
+					casePattern = "(?i)"
+				}
+				reg, err := regexp.Compile(casePattern + "[^a-zA-Z0-9]" + regPattern)
+				if err != nil {
+					return err
+				}
+
 				andPatterns = append(andPatterns, &SimpleContentSearchEngineTerm{
 					Pattern: andPattern,
 					Prefix:  strings.ToLower(prefixes[0]),
+					Regex:   reg,
 				})
 			}
 		}
@@ -166,7 +228,7 @@ func (q *SimpleContentSearchEngine) Compile(query string) error {
 			continue
 		}
 
-		orClauses = append(orClauses, &SimpleContentSearchEngineOrClause{
+		orClauses = append(orClauses, &SimpleContentSearchEngineAndClause{
 			AndTerms: andPatterns,
 		})
 	}
@@ -177,6 +239,24 @@ func (q *SimpleContentSearchEngine) Compile(query string) error {
 
 	q.OrClauses = orClauses
 	return nil
+}
+
+func (q *SimpleContentSearchEngine) String() string {
+	orClauses := []string{}
+	for _, orClause := range q.OrClauses {
+		orClauses = append(orClauses, orClause.String())
+	}
+
+	return strings.Join(orClauses, " | ")
+}
+
+func (t *SimpleContentSearchEngineAndClause) String() string {
+	terms := []string{}
+	for _, term := range t.AndTerms {
+		terms = append(terms, term.String())
+	}
+
+	return strings.Join(terms, " AND ")
 }
 
 func (t *SimpleContentSearchEngineTerm) String() string {

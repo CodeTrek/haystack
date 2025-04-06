@@ -23,10 +23,11 @@ type SearchFilters struct {
 // @param Limit.MaxFiles: is the max files to apply to the search
 // @param Limit.MaxLinesPerFile: is the max lines per file to apply to the search
 type SearchContentRequest struct {
-	Workspace string         `json:"workspace,omitempty"`
-	Query     string         `json:"query,omitempty"`
-	Filters   *SearchFilters `json:"filters,omitempty"`
-	Limit     *SearchLimit   `json:"limit,omitempty"`
+	Workspace     string         `json:"workspace,omitempty"`
+	Query         string         `json:"query,omitempty"`
+	CaseSensitive bool           `json:"case_sensitive,omitempty"`
+	Filters       *SearchFilters `json:"filters,omitempty"`
+	Limit         *SearchLimit   `json:"limit,omitempty"`
 }
 
 type LineMatch struct {
@@ -41,14 +42,16 @@ type SearchContentLine struct {
 }
 
 type SearchContentResult struct {
-	File  string      `json:"file"`
-	Lines []LineMatch `json:"lines,omitempty"`
+	File     string      `json:"file"`
+	Lines    []LineMatch `json:"lines,omitempty"`
+	Truncate bool        `json:"truncate,omitempty"`
 }
 
 type SearchContentResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		Results []SearchContentResult `json:"results,omitempty"`
+		Results  []SearchContentResult `json:"results,omitempty"`
+		Truncate bool                  `json:"truncate,omitempty"`
 	} `json:"data,omitempty"`
 }

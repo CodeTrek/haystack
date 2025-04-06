@@ -38,7 +38,8 @@ type QueryFilters struct {
 // returns a list of results
 func SearchContent(workspace *workspace.Workspace, query string,
 	filters *types.SearchFilters,
-	limit *types.SearchLimit) []types.SearchContentResult {
+	limit *types.SearchLimit,
+	caseSensitive bool) ([]types.SearchContentResult, bool) {
 	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var isTimeout = func() bool {
@@ -51,16 +52,16 @@ func SearchContent(workspace *workspace.Workspace, query string,
 	}
 
 	engine := NewSimpleContentSearchEngine(workspace, limit, filters)
-	err := engine.Compile(query)
+	err := engine.Compile(query, caseSensitive)
 	if err != nil {
 		log.Println("Failed to compile query:", err)
-		return []types.SearchContentResult{}
+		return []types.SearchContentResult{}, false
 	}
 
 	// Collect the all related documents
 	results, err := engine.CollectDocuments()
 	if err != nil {
-		return []types.SearchContentResult{}
+		return []types.SearchContentResult{}, false
 	}
 
 	docIds := results.DocIds
@@ -83,6 +84,7 @@ func SearchContent(workspace *workspace.Workspace, query string,
 
 	// TODO: Add lines to the results
 	finalResults := []types.SearchContentResult{}
+	totalHits := 0
 	for _, doc := range docs {
 		if isTimeout() {
 			break
@@ -106,6 +108,7 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		}
 
 		lineNumber := 1
+		fileHits := 0
 		for scanner.Scan() {
 			line := scanner.Text()
 			if engine.IsLineMatch(line) {
@@ -115,6 +118,15 @@ func SearchContent(workspace *workspace.Workspace, query string,
 						Content:    line,
 					},
 				})
+				fileHits++
+				totalHits++
+				if fileHits >= engine.Limit.MaxResultsPerFile {
+					fileMatch.Truncate = true
+					break
+				}
+				if totalHits >= engine.Limit.MaxResults {
+					break
+				}
 			}
 			lineNumber++
 		}
@@ -123,7 +135,11 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		if len(fileMatch.Lines) > 0 {
 			finalResults = append(finalResults, fileMatch)
 		}
+
+		if totalHits >= engine.Limit.MaxResults {
+			break
+		}
 	}
 
-	return finalResults
+	return finalResults, totalHits >= engine.Limit.MaxResults
 }
