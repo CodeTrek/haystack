@@ -1,6 +1,7 @@
 package searcher
 
 import (
+	"bufio"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"haystack/server/indexer"
@@ -8,6 +9,7 @@ import (
 	"haystack/shared/types"
 	"haystack/utils"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 )
@@ -36,14 +38,15 @@ func SearchContent(workspace *workspace.Workspace, query string,
 	filters *types.SearchFilters,
 	limit *types.SearchLimit) []types.SearchContentResult {
 
-	search := NewSimpleSearchContent(workspace, limit, filters)
-	err := search.Compile(query)
+	engine := NewSimpleContentSearchEngine(workspace, limit, filters)
+	err := engine.Compile(query)
 	if err != nil {
 		log.Println("Failed to compile query:", err)
 		return []types.SearchContentResult{}
 	}
 
-	results, err := search.CollectDocuments()
+	// Collect the all related documents
+	results, err := engine.CollectDocuments()
 	if err != nil {
 		return []types.SearchContentResult{}
 	}
@@ -55,7 +58,10 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		if err != nil {
 			continue
 		}
-		docs[docid] = doc
+
+		if doc != nil {
+			docs[docid] = doc
+		}
 	}
 
 	removedDocs := indexer.RefreshFileIfNeeded(workspace.ID, docs)
@@ -70,9 +76,37 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		if err != nil {
 			continue
 		}
-		finalResults = append(finalResults, types.SearchContentResult{
-			File: filepath.Clean(relPath),
-		})
+
+		file, err := os.Open(doc.FullPath)
+		if err != nil {
+			log.Println("Failed to open file:", doc.FullPath, ", error:", err)
+			continue
+		}
+		scanner := bufio.NewScanner(file)
+
+		fileMatch := types.SearchContentResult{
+			File:  filepath.Clean(relPath),
+			Lines: []types.LineMatch{},
+		}
+
+		lineNumber := 1
+		for scanner.Scan() {
+			line := scanner.Text()
+			if engine.IsLineMatch(line) {
+				fileMatch.Lines = append(fileMatch.Lines, types.LineMatch{
+					Line: types.SearchContentLine{
+						LineNumber: lineNumber,
+						Content:    line,
+					},
+				})
+			}
+			lineNumber++
+		}
+
+		file.Close()
+		if len(fileMatch.Lines) > 0 {
+			finalResults = append(finalResults, fileMatch)
+		}
 	}
 
 	return finalResults

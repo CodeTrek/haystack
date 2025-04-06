@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"fmt"
+	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"log"
@@ -27,17 +28,10 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Indexer started.")
 }
 
-func RestoreIndexingIfNeeded() {
+func RefreshIndexIfNeeded() {
 	workspacePaths := workspace.GetAll()
 	for _, w := range workspacePaths {
-		workspace, err := workspace.GetByPath(w)
-		if err != nil {
-			continue
-		}
-
-		if workspace.LastFullSync.IsZero() {
-			SyncIfNeeded(workspace.Path)
-		}
+		SyncIfNeeded(w)
 	}
 }
 
@@ -62,13 +56,34 @@ func SyncIfNeeded(workspacePath string) error {
 	return nil
 }
 
-func SyncFile(workspace *workspace.Workspace, filePath string) error {
-	parser.Add(workspace, filePath)
+func AddOrSyncFile(workspace *workspace.Workspace, fullPath string) error {
+	docid := GetDocumentId(fullPath)
+	doc, err := storage.GetDocument(workspace.ID, docid, false)
+	if err != nil {
+		return err
+	}
+
+	if doc == nil {
+		stat, _ := os.Stat(fullPath)
+		if !stat.IsDir() && stat.Size() < conf.Get().Server.MaxFileSize {
+			// Add new file to the parser queue
+			parser.Add(workspace, fullPath)
+		}
+	} else {
+		stat, err := os.Stat(fullPath)
+		if err != nil || stat.IsDir() || stat.Size() > conf.Get().Server.MaxFileSize {
+			// Remove the file from the index
+			RemoveFile(workspace, doc.FullPath)
+		} else {
+			// Sync existing file to the parser queue
+			parser.Add(workspace, fullPath)
+		}
+	}
+
 	return nil
 }
 
 func RemoveFile(workspace *workspace.Workspace, filePath string) error {
-	// TODO: Implement
 	docid := GetDocumentId(filePath)
 
 	storage.DeleteDocument(workspace.ID, docid)
@@ -86,7 +101,7 @@ func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) 
 		stat, err := os.Stat(doc.FullPath)
 
 		// If the file becomes a directory or there is an error, remove it
-		if stat.IsDir() || err != nil {
+		if err != nil || stat.IsDir() {
 			RemoveFile(workspace, doc.FullPath)
 			removedDocs = append(removedDocs, doc.ID)
 			continue

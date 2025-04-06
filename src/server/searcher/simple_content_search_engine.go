@@ -7,6 +7,7 @@ import (
 	"haystack/server/core/workspace"
 	"haystack/shared/types"
 	"haystack/utils"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,23 +15,23 @@ import (
 
 var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 
-type SimpleSearchContent struct {
+type SimpleContentSearchEngine struct {
 	Workspace *workspace.Workspace
-	OrClauses []*SimpleSearchContentOrClause
+	OrClauses []*SimpleContentSearchEngineOrClause
 	Limit     types.SearchLimit
 	Filters   QueryFilters
 }
 
-type SimpleSearchContentOrClause struct {
-	AndTerms []*SimpleSearchContentTerm
+type SimpleContentSearchEngineOrClause struct {
+	AndTerms []*SimpleContentSearchEngineTerm
 }
 
-type SimpleSearchContentTerm struct {
+type SimpleContentSearchEngineTerm struct {
 	Pattern string
 	Prefix  string
 }
 
-func (q *SimpleSearchContent) CollectDocuments() (*storage.SearchResult, error) {
+func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, error) {
 	rs := []*storage.SearchResult{}
 	// Collect the documents for each or clause
 	for _, orClause := range q.OrClauses {
@@ -57,7 +58,7 @@ func (q *SimpleSearchContent) CollectDocuments() (*storage.SearchResult, error) 
 	return result, nil
 }
 
-func (q *SimpleSearchContentOrClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
+func (q *SimpleContentSearchEngineOrClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
 	// Collect the documents for each term
 	rs := []*storage.SearchResult{}
 	for _, term := range q.AndTerms {
@@ -83,11 +84,14 @@ func (q *SimpleSearchContentOrClause) CollectDocuments(workspaceId string) (*sto
 	return result, nil
 }
 
-func (q *SimpleSearchContentTerm) CollectDocuments(workspaceId string) storage.SearchResult {
-	return storage.Search(workspaceId, q.Prefix, -1)
+func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) storage.SearchResult {
+	r := storage.Search(workspaceId, q.Prefix, -1)
+	log.Printf("SimpleContentSearchEngineTerm.CollectDocuments: `%s` found %d documents", q.String(), len(r.DocIds))
+	return r
 }
 
-func NewSimpleSearchContent(workspace *workspace.Workspace, limit *types.SearchLimit, filter *types.SearchFilters) *SimpleSearchContent {
+func NewSimpleContentSearchEngine(workspace *workspace.Workspace, limit *types.SearchLimit,
+	filter *types.SearchFilters) *SimpleContentSearchEngine {
 	queryLimit := conf.Get().Server.SearchLimit
 
 	if limit != nil {
@@ -114,7 +118,7 @@ func NewSimpleSearchContent(workspace *workspace.Workspace, limit *types.SearchL
 		}
 	}
 
-	return &SimpleSearchContent{
+	return &SimpleContentSearchEngine{
 		Workspace: workspace,
 		Limit:     queryLimit,
 		Filters: QueryFilters{
@@ -125,20 +129,24 @@ func NewSimpleSearchContent(workspace *workspace.Workspace, limit *types.SearchL
 	}
 }
 
-func (q *SimpleSearchContent) Compile(query string) error {
+func (q *SimpleContentSearchEngine) IsLineMatch(line string) bool {
+	return false
+}
+
+func (q *SimpleContentSearchEngine) Compile(query string) error {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return errors.New("query is empty")
 	}
 
-	orClauses := []*SimpleSearchContentOrClause{}
+	orClauses := []*SimpleContentSearchEngineOrClause{}
 	for _, orClause := range strings.Split(query, "|") {
 		orClause = strings.TrimSpace(orClause)
 		if orClause == "" {
 			continue
 		}
 
-		andPatterns := []*SimpleSearchContentTerm{}
+		andPatterns := []*SimpleContentSearchEngineTerm{}
 		for _, andPattern := range strings.Split(orClause, " ") {
 			andPattern = strings.TrimSpace(andPattern)
 			if andPattern == "" || andPattern == "AND" {
@@ -147,7 +155,7 @@ func (q *SimpleSearchContent) Compile(query string) error {
 
 			prefixes := rePrefix.FindAllString(andPattern, 1)
 			if len(prefixes) > 0 {
-				andPatterns = append(andPatterns, &SimpleSearchContentTerm{
+				andPatterns = append(andPatterns, &SimpleContentSearchEngineTerm{
 					Pattern: andPattern,
 					Prefix:  strings.ToLower(prefixes[0]),
 				})
@@ -158,7 +166,7 @@ func (q *SimpleSearchContent) Compile(query string) error {
 			continue
 		}
 
-		orClauses = append(orClauses, &SimpleSearchContentOrClause{
+		orClauses = append(orClauses, &SimpleContentSearchEngineOrClause{
 			AndTerms: andPatterns,
 		})
 	}
@@ -169,4 +177,8 @@ func (q *SimpleSearchContent) Compile(query string) error {
 
 	q.OrClauses = orClauses
 	return nil
+}
+
+func (t *SimpleContentSearchEngineTerm) String() string {
+	return t.Pattern
 }

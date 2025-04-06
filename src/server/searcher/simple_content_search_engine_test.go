@@ -8,7 +8,7 @@ func TestParseQuerySimple(t *testing.T) {
 	tests := []struct {
 		name    string
 		query   string
-		want    *SimpleSearchContent
+		want    *SimpleContentSearchEngine
 		wantErr bool
 	}{
 		{
@@ -24,10 +24,10 @@ func TestParseQuerySimple(t *testing.T) {
 		{
 			name:  "single pattern",
 			query: "test",
-			want: &SimpleSearchContent{
-				OrClauses: []*SimpleSearchContentOrClause{
+			want: &SimpleContentSearchEngine{
+				OrClauses: []*SimpleContentSearchEngineOrClause{
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "test",
 								Prefix:  "test",
@@ -40,10 +40,10 @@ func TestParseQuerySimple(t *testing.T) {
 		{
 			name:  "multiple AND patterns",
 			query: "test1 test2",
-			want: &SimpleSearchContent{
-				OrClauses: []*SimpleSearchContentOrClause{
+			want: &SimpleContentSearchEngine{
+				OrClauses: []*SimpleContentSearchEngineOrClause{
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "test1",
 								Prefix:  "test1",
@@ -60,10 +60,10 @@ func TestParseQuerySimple(t *testing.T) {
 		{
 			name:  "OR clauses",
 			query: "test1 test2 | test3",
-			want: &SimpleSearchContent{
-				OrClauses: []*SimpleSearchContentOrClause{
+			want: &SimpleContentSearchEngine{
+				OrClauses: []*SimpleContentSearchEngineOrClause{
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "test1",
 								Prefix:  "test1",
@@ -75,7 +75,7 @@ func TestParseQuerySimple(t *testing.T) {
 						},
 					},
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "test3",
 								Prefix:  "test3",
@@ -88,10 +88,10 @@ func TestParseQuerySimple(t *testing.T) {
 		{
 			name:  "pattern with prefix",
 			query: "prefix:value",
-			want: &SimpleSearchContent{
-				OrClauses: []*SimpleSearchContentOrClause{
+			want: &SimpleContentSearchEngine{
+				OrClauses: []*SimpleContentSearchEngineOrClause{
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "prefix:value",
 								Prefix:  "prefix",
@@ -104,10 +104,10 @@ func TestParseQuerySimple(t *testing.T) {
 		{
 			name:  "complex query with prefixes and OR",
 			query: "field1:value1 field2:value2 | field3:value3",
-			want: &SimpleSearchContent{
-				OrClauses: []*SimpleSearchContentOrClause{
+			want: &SimpleContentSearchEngine{
+				OrClauses: []*SimpleContentSearchEngineOrClause{
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "field1:value1",
 								Prefix:  "field1",
@@ -119,7 +119,7 @@ func TestParseQuerySimple(t *testing.T) {
 						},
 					},
 					{
-						AndTerms: []*SimpleSearchContentTerm{
+						AndTerms: []*SimpleContentSearchEngineTerm{
 							{
 								Pattern: "field3:value3",
 								Prefix:  "field3",
@@ -133,7 +133,7 @@ func TestParseQuerySimple(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := &SimpleSearchContent{}
+			got := &SimpleContentSearchEngine{}
 			err := got.Compile(tt.query)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseQuerySimple() error = %v, wantErr %v", err, tt.wantErr)
