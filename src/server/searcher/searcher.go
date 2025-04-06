@@ -2,6 +2,7 @@ package searcher
 
 import (
 	"bufio"
+	"context"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"haystack/server/indexer"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 func Run(wg *sync.WaitGroup) {
@@ -37,6 +39,16 @@ type QueryFilters struct {
 func SearchContent(workspace *workspace.Workspace, query string,
 	filters *types.SearchFilters,
 	limit *types.SearchLimit) []types.SearchContentResult {
+	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var isTimeout = func() bool {
+		select {
+		case <-timeout.Done():
+			return true
+		default:
+			return false
+		}
+	}
 
 	engine := NewSimpleContentSearchEngine(workspace, limit, filters)
 	err := engine.Compile(query)
@@ -72,6 +84,10 @@ func SearchContent(workspace *workspace.Workspace, query string,
 	// TODO: Add lines to the results
 	finalResults := []types.SearchContentResult{}
 	for _, doc := range docs {
+		if isTimeout() {
+			break
+		}
+
 		relPath, err := filepath.Rel(workspace.Path, doc.FullPath)
 		if err != nil {
 			continue
