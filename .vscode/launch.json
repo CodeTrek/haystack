@@ -22,6 +22,20 @@
       "request": "attach",
       "mode": "local",
       "processId": "${command:pickProcess}"
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Haystack VS Code Extension",
+      "program": "${workspaceFolder}/extensions/vscode/node_modules/.bin/vsce",
+      "args": [
+          "package"
+      ],
+      "outFiles": [
+          "${workspaceFolder}/extensions/vscode/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: watch",
+      "postDebugTask": "npm: clean"
+  }
   ]
 }

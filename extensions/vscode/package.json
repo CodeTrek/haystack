@@ -1,0 +1,55 @@
+{
+  "name": "vscode-haystack-search",
+  "displayName": "VS Code Haystack Search",
+  "description": "A VS Code extension that integrates Haystack for advanced file search capabilities.",
+  "version": "0.0.1",
+  "publisher": "Jianjun Chen",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "activationEvents": [
+    "onCommand:haystack.search"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "node ./out/test/runTest.js",
+    "build": "npm run compile && vsce package",
+    "clean": "rimraf out",
+    "lint": "eslint src --ext ts",
+    "pretest": "npm run compile && npm run lint"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "haystack.search",
+        "title": "Haystack Search Files"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "haystackView",
+          "name": "File Search"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^22.14.0",
+    "@types/vscode": "^1.60.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "rimraf": "^3.0.2",
+    "typescript": "^5.8.3",
+    "vscode-test": "^1.6.0",
+    "vsce": "^2.15.0"
+  }
+}
