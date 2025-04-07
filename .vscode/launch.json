@@ -27,15 +27,19 @@
       "type": "node",
       "request": "launch",
       "name": "Haystack VS Code Extension",
-      "program": "${workspaceFolder}/extensions/vscode/node_modules/.bin/vsce",
+      "cwd": "${workspaceFolder}/extensions/vscode",
+			"runtimeExecutable": "${execPath}",
       "args": [
-          "package"
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode",
       ],
       "outFiles": [
           "${workspaceFolder}/extensions/vscode/out/**/*.js"
       ],
-      "preLaunchTask": "npm: watch",
-      "postDebugTask": "npm: clean"
-  }
+      "preLaunchTask": "${defaultBuildTask}",
+      "env": {
+        "IS_DEV": "true",
+        "DEV_WORKSPACE_FOLDER": "${workspaceFolder}/extensions/vscode"
+      },
+     }
   ]
 }

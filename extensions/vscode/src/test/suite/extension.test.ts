@@ -12,24 +12,20 @@ export function runTests() {
 
         test('should return search results for a valid query', async () => {
             const query = 'test';
-            const token = new vscode.CancellationTokenSource().token;
-            const results = await haystackProvider.provideTextSearchResults(query, {
-                includeDeclaration: true,
+            const results = await haystackProvider.search(query, {
                 maxResults: 10
-            }, token);
+            });
 
             assert.ok(results.length > 0, 'Expected search results to be returned');
         });
 
         test('should return no results for an invalid query', async () => {
             const query = 'nonexistentquery';
-            const token = new vscode.CancellationTokenSource().token;
-            const results = await haystackProvider.provideTextSearchResults(query, {
-                includeDeclaration: true,
+            const results = await haystackProvider.search(query, {
                 maxResults: 10
-            }, token);
+            });
 
-            assert.strictEqual(results.length, 0, 'Expected no search results to be returned');
+            assert.strictEqual(results.length, 0, 'Expected no search results for invalid query');
         });
 
         // Additional tests can be added here

@@ -4,11 +4,13 @@
   "description": "A VS Code extension that integrates Haystack for advanced file search capabilities.",
   "version": "0.0.1",
   "publisher": "Jianjun Chen",
+  "repository": "https://github.com/codetrek/haystack",
+  "license": "MIT",
   "engines": {
-    "vscode": "^1.60.0"
+    "vscode": "^1.89.0"
   },
   "activationEvents": [
-    "onCommand:haystack.search"
+    "onView:haystackSearch"
   ],
   "main": "./out/extension.js",
   "scripts": {
@@ -22,17 +24,21 @@
     "pretest": "npm run compile && npm run lint"
   },
   "contributes": {
-    "commands": [
-      {
-        "command": "haystack.search",
-        "title": "Haystack Search Files"
-      }
-    ],
-    "views": {
-      "explorer": [
+    "viewsContainers": {
+      "activitybar": [
         {
-          "id": "haystackView",
-          "name": "File Search"
+          "id": "haystack-search",
+          "title": "Haystack Search",
+          "icon": "media/search.svg"
+        }
+      ]
+    },
+    "views": {
+      "haystack-search": [
+        {
+          "id": "haystackSearch",
+          "name": "Search",
+          "type": "webview"
         }
       ]
     }
@@ -43,7 +49,7 @@
   "devDependencies": {
     "@types/mocha": "^9.0.0",
     "@types/node": "^22.14.0",
-    "@types/vscode": "^1.60.0",
+    "@types/vscode": "^1.89.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
     "eslint": "^8.28.0",

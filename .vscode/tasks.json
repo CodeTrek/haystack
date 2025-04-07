@@ -10,7 +10,7 @@
             "command": "npm",
             "args": [
                 "run",
-                "build"
+                "compile"
             ],
             "group": {
                 "kind": "build",
