@@ -6,6 +6,7 @@ import (
 	"haystack/server/core/workspace"
 	"haystack/server/indexer"
 	"haystack/shared/types"
+	"log"
 	"net/http"
 )
 
@@ -20,16 +21,16 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	ws, _ := workspace.GetByPath(request.Path)
+	ws, _ := workspace.GetByPath(request.Workspace)
 	if ws != nil {
 		json.NewEncoder(w).Encode(types.CommonResponse{
-			Code:    1,
+			Code:    0,
 			Message: "Workspace already exists",
 		})
 		return
 	}
 
-	ws, err = workspace.GetOrCreate(request.Path)
+	ws, err = workspace.GetOrCreate(request.Workspace)
 	if err != nil {
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,
@@ -39,6 +40,8 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	indexer.SyncIfNeeded(ws.Path)
+
+	log.Printf("Created workspace %s", request.Workspace)
 
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,
@@ -57,7 +60,7 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	ws, err := workspace.GetByPath(request.Path)
+	ws, err := workspace.GetByPath(request.Workspace)
 	if err != nil {
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,

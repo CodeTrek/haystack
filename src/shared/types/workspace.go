@@ -1,11 +1,11 @@
 package types
 
 type CreateWorkspaceRequest struct {
-	Path string `json:"path"`
+	Workspace string `json:"workspace"`
 }
 
 type DeleteWorkspaceRequest struct {
-	Path string `json:"path"`
+	Workspace string `json:"workspace"`
 }
 
 type ListWorkspaceResponse struct {

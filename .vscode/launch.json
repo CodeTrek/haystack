@@ -24,7 +24,7 @@
       "processId": "${command:pickProcess}"
     },
     {
-      "type": "node",
+			"type": "extensionHost",
       "request": "launch",
       "name": "Haystack VS Code Extension",
       "cwd": "${workspaceFolder}/extensions/vscode",

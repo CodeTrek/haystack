@@ -84,44 +84,85 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
                     .search-container {
                         padding: 10px;
                     }
+                    .search-input-container {
+                        display: flex;
+                        gap: 6px;
+                        margin-bottom: 8px;
+                    }
                     .search-input {
-                        width: 100%;
-                        padding: 5px;
-                        margin-bottom: 10px;
+                        flex: 1;
+                        padding: 4px 6px;
                         background: var(--vscode-input-background);
                         color: var(--vscode-input-foreground);
                         border: 1px solid var(--vscode-input-border);
+                        border-radius: 2px;
+                        font-size: 13px;
+                        line-height: 18px;
+                    }
+                    .search-input:focus {
+                        outline: 1px solid var(--vscode-focusBorder);
+                        outline-offset: -1px;
+                    }
+                    .search-button {
+                        padding: 4px 8px;
+                        background: var(--vscode-button-background);
+                        color: var(--vscode-button-foreground);
+                        border: none;
+                        border-radius: 2px;
+                        cursor: pointer;
+                        font-size: 13px;
+                        line-height: 18px;
+                    }
+                    .search-button:hover {
+                        background: var(--vscode-button-hoverBackground);
                     }
                     .search-options {
-                        margin-bottom: 10px;
+                        margin-bottom: 8px;
                     }
                     .search-option {
-                        margin-bottom: 5px;
+                        margin-bottom: 6px;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    .search-option input[type="checkbox"] {
+                        margin: 0;
+                    }
+                    .search-option label {
+                        font-size: 13px;
+                        user-select: none;
                     }
                     .search-results {
-                        margin-top: 10px;
+                        margin-top: 8px;
                     }
                     .result-item {
-                        padding: 5px;
+                        padding: 6px 8px;
                         cursor: pointer;
-                        border-bottom: 1px solid var(--vscode-list-inactiveSelectionBackground);
+                        border-radius: 2px;
                     }
                     .result-item:hover {
                         background: var(--vscode-list-hoverBackground);
                     }
                     .result-path {
-                        font-size: 0.9em;
+                        font-size: 12px;
                         color: var(--vscode-descriptionForeground);
+                        margin-bottom: 2px;
                     }
                     .result-preview {
                         font-family: var(--vscode-editor-font-family);
-                        margin-top: 3px;
+                        font-size: 13px;
+                        margin-top: 2px;
+                        white-space: pre-wrap;
+                        overflow-wrap: break-word;
                     }
                 </style>
             </head>
             <body>
                 <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Search in files..." id="searchInput">
+                    <div class="search-input-container">
+                        <input type="text" class="search-input" placeholder="Search in files..." id="searchInput">
+                        <button class="search-button" id="searchButton">Search</button>
+                    </div>
                     <div class="search-options">
                         <div class="search-option">
                             <input type="checkbox" id="caseSensitive">
@@ -138,11 +179,15 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
                 </div>
                 <script>
                     const vscode = acquireVsCodeApi();
-                    let searchTimeout;
 
-                    document.getElementById('searchInput').addEventListener('input', (e) => {
-                        clearTimeout(searchTimeout);
-                        searchTimeout = setTimeout(() => performSearch(), 300);
+                    document.getElementById('searchButton').addEventListener('click', () => {
+                        performSearch();
+                    });
+
+                    document.getElementById('searchInput').addEventListener('keyup', (event) => {
+                        if (event.key === 'Enter') {
+                            performSearch();
+                        }
                     });
 
                     function performSearch() {
