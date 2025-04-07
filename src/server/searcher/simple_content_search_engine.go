@@ -2,13 +2,9 @@ package searcher
 
 import (
 	"errors"
-	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
-	"haystack/shared/types"
-	"haystack/utils"
 	"log"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -18,8 +14,6 @@ var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)
 type SimpleContentSearchEngine struct {
 	Workspace *workspace.Workspace
 	OrClauses []*SimpleContentSearchEngineAndClause
-	Limit     types.SearchLimit
-	Filters   QueryFilters
 }
 
 type SimpleContentSearchEngineAndClause struct {
@@ -101,42 +95,9 @@ func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) sto
 	return r
 }
 
-func NewSimpleContentSearchEngine(workspace *workspace.Workspace, limit *types.SearchLimit,
-	filter *types.SearchFilters) *SimpleContentSearchEngine {
-	queryLimit := conf.Get().Server.SearchLimit
-
-	if limit != nil {
-		if limit.MaxResults > 0 && limit.MaxResults < queryLimit.MaxResults {
-			queryLimit.MaxResults = limit.MaxResults
-		}
-
-		if limit.MaxResultsPerFile > 0 && limit.MaxResultsPerFile < queryLimit.MaxResultsPerFile {
-			queryLimit.MaxResultsPerFile = limit.MaxResultsPerFile
-		}
-	}
-
-	var includeFilter *utils.SimpleFilter
-	var excludeFilter *utils.SimpleFilter
-	var pathFilter = ""
-	if filter != nil {
-		pathFilter = filepath.Clean(filter.Path)
-		if filter.Include != "" {
-			includeFilter = utils.NewSimpleFilter(strings.Split(filter.Include, ","), workspace.Path)
-		}
-
-		if filter.Exclude != "" {
-			excludeFilter = utils.NewSimpleFilter(strings.Split(filter.Exclude, ","), workspace.Path)
-		}
-	}
-
+func NewSimpleContentSearchEngine(workspace *workspace.Workspace) *SimpleContentSearchEngine {
 	return &SimpleContentSearchEngine{
 		Workspace: workspace,
-		Limit:     queryLimit,
-		Filters: QueryFilters{
-			Path:    pathFilter,
-			Include: includeFilter,
-			Exclude: excludeFilter,
-		},
 	}
 }
 
@@ -199,14 +160,15 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 
 			prefixes := rePrefix.FindAllString(andPattern, 1)
 			if len(prefixes) > 0 {
-				regPattern := prefixes[0]
+				regPattern := andPattern
 				regPattern = strings.ReplaceAll(regPattern, ".", "\\.")
-				regPattern = strings.ReplaceAll(regPattern, "*", ".*")
+				regPattern = strings.ReplaceAll(regPattern, "*", ".{0,32}")
 				regPattern = strings.ReplaceAll(regPattern, "?", ".?")
 				regPattern = strings.ReplaceAll(regPattern, "[", "\\[")
 				regPattern = strings.ReplaceAll(regPattern, "]", "\\]")
 				regPattern = strings.ReplaceAll(regPattern, "^", "\\^")
 				regPattern = strings.ReplaceAll(regPattern, "$", "\\$")
+				regPattern = strings.ReplaceAll(regPattern, ":", "\\:")
 				casePattern := ""
 				if !caseSensitive {
 					casePattern = "(?i)"

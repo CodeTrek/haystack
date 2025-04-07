@@ -67,7 +67,7 @@ func handleSearchContent(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	// Search the content of the workspace
-	results, truncate := searcher.SearchContent(workspace, request.Query, request.Filters, request.Limit, request.CaseSensitive)
+	results, truncate := searcher.SearchContent(workspace, &request)
 	defer func() {
 		totalHits := 0
 		for _, result := range results {

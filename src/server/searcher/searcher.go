@@ -3,6 +3,7 @@ package searcher
 import (
 	"bufio"
 	"context"
+	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"haystack/server/indexer"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,10 +38,7 @@ type QueryFilters struct {
 // SearchContent searches the content of the workspace
 // query is a list of words to search for
 // returns a list of results
-func SearchContent(workspace *workspace.Workspace, query string,
-	filters *types.SearchFilters,
-	limit *types.SearchLimit,
-	caseSensitive bool) ([]types.SearchContentResult, bool) {
+func SearchContent(workspace *workspace.Workspace, req *types.SearchContentRequest) ([]types.SearchContentResult, bool) {
 	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var isTimeout = func() bool {
@@ -51,8 +50,35 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		}
 	}
 
-	engine := NewSimpleContentSearchEngine(workspace, limit, filters)
-	err := engine.Compile(query, caseSensitive)
+	limit := conf.Get().Server.SearchLimit
+	if req.Limit != nil {
+		if req.Limit.MaxResults > 0 && req.Limit.MaxResults < limit.MaxResults {
+			limit.MaxResults = req.Limit.MaxResults
+		}
+
+		if req.Limit.MaxResultsPerFile > 0 && req.Limit.MaxResultsPerFile < limit.MaxResultsPerFile {
+			limit.MaxResultsPerFile = req.Limit.MaxResultsPerFile
+		}
+	}
+
+	var includeFilter *utils.SimpleFilter
+	var excludeFilter *utils.SimpleFilter
+	var pathFilter = ""
+	if req.Filters != nil {
+		pathFilter = strings.ToLower(
+			filepath.FromSlash(filepath.Clean(filepath.Join(workspace.Path, req.Filters.Path)) + "/"))
+
+		if req.Filters.Include != "" {
+			includeFilter = utils.NewSimpleFilter(strings.Split(req.Filters.Include, ","), workspace.Path)
+		}
+
+		if req.Filters.Exclude != "" {
+			excludeFilter = utils.NewSimpleFilter(strings.Split(req.Filters.Exclude, ","), workspace.Path)
+		}
+	}
+
+	engine := NewSimpleContentSearchEngine(workspace)
+	err := engine.Compile(req.Query, req.CaseSensitive)
 	if err != nil {
 		log.Println("Failed to compile query:", err)
 		return []types.SearchContentResult{}, false
@@ -72,6 +98,20 @@ func SearchContent(workspace *workspace.Workspace, query string,
 			continue
 		}
 
+		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(doc.FullPath), pathFilter) {
+			continue
+		}
+
+		// Excluded by filter
+		if excludeFilter != nil && excludeFilter.Match(doc.FullPath, false) {
+			continue
+		}
+
+		// Not included by include filter
+		if includeFilter != nil && !includeFilter.Match(doc.FullPath, false) {
+			continue
+		}
+
 		if doc != nil {
 			docs[docid] = doc
 		}
@@ -82,7 +122,6 @@ func SearchContent(workspace *workspace.Workspace, query string,
 		delete(docs, docid)
 	}
 
-	// TODO: Add lines to the results
 	finalResults := []types.SearchContentResult{}
 	totalHits := 0
 	for _, doc := range docs {
@@ -95,6 +134,7 @@ func SearchContent(workspace *workspace.Workspace, query string,
 			continue
 		}
 
+		// Read file and match line by line
 		file, err := os.Open(doc.FullPath)
 		if err != nil {
 			log.Println("Failed to open file:", doc.FullPath, ", error:", err)
@@ -120,11 +160,11 @@ func SearchContent(workspace *workspace.Workspace, query string,
 				})
 				fileHits++
 				totalHits++
-				if fileHits >= engine.Limit.MaxResultsPerFile {
+				if fileHits >= limit.MaxResultsPerFile {
 					fileMatch.Truncate = true
 					break
 				}
-				if totalHits >= engine.Limit.MaxResults {
+				if totalHits >= limit.MaxResults {
 					break
 				}
 			}
@@ -136,10 +176,10 @@ func SearchContent(workspace *workspace.Workspace, query string,
 			finalResults = append(finalResults, fileMatch)
 		}
 
-		if totalHits >= engine.Limit.MaxResults {
+		if totalHits >= limit.MaxResults {
 			break
 		}
 	}
 
-	return finalResults, totalHits >= engine.Limit.MaxResults
+	return finalResults, totalHits >= limit.MaxResults
 }

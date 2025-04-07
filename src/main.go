@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"haystack/client"
 	"haystack/conf"
 	"haystack/server"
 	"haystack/shared/running"
@@ -27,6 +28,6 @@ func main() {
 			running.StartNewServer()
 		}
 	} else {
-		log.Fatal("Client mode not implemented yet")
+		client.Run()
 	}
 }

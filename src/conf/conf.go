@@ -18,7 +18,7 @@ const (
 	DefaultPort         = 13134
 
 	DefaultMaxResults        = 5000
-	DefaultMaxResultsPerFile = 1000
+	DefaultMaxResultsPerFile = 500
 )
 
 var (
@@ -67,18 +67,13 @@ type Conf struct {
 var conf *Conf
 
 func checkMode() {
-	if !running.IsServerMode() {
-		panic("server conf is not accessible in client mode!")
-	}
 }
 
 func Get() *Conf {
-	checkMode()
 	return conf
 }
 
 func Load() error {
-	checkMode()
 	homePath := filepath.Join(running.UserHomeDir(), ".haystack")
 
 	search := []string{
