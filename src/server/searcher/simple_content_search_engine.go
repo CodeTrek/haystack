@@ -101,41 +101,43 @@ func NewSimpleContentSearchEngine(workspace *workspace.Workspace) *SimpleContent
 	}
 }
 
-func (q *SimpleContentSearchEngine) IsLineMatch(line string) bool {
+func (q *SimpleContentSearchEngine) IsLineMatch(line string) [][]int {
 	for _, orClause := range q.OrClauses {
-		if orClause.IsLineMatch(line) {
-			return true
+		matches := orClause.IsLineMatch(line)
+		if len(matches) > 0 {
+			return matches
 		}
 	}
 
-	return false
+	return [][]int{}
 }
 
-func (q *SimpleContentSearchEngineAndClause) IsLineMatch(line string) bool {
+func (q *SimpleContentSearchEngineAndClause) IsLineMatch(line string) [][]int {
 	if len(q.AndTerms) == 0 {
-		return false
+		return [][]int{}
 	}
 
 	// We should match keywords in orders
-	matchIndex := -1
+	matches := [][]int{}
 	for _, term := range q.AndTerms {
-		matchIndex = term.IsLineMatch(line)
-		if matchIndex == -1 {
-			return false
+		match := term.IsLineMatch(line)
+		if len(match) == 0 {
+			return [][]int{}
 		}
-		line = line[matchIndex:]
+		matches = append(matches, match)
+		line = line[match[1]:]
 	}
 
-	return true
+	return matches
 }
 
-func (q *SimpleContentSearchEngineTerm) IsLineMatch(line string) int {
+func (q *SimpleContentSearchEngineTerm) IsLineMatch(line string) []int {
 	match := q.Regex.FindAllStringIndex(line, 1)
 	if len(match) > 0 {
-		return match[0][1]
+		return []int{match[0][0], match[0][1]}
 	}
 
-	return -1
+	return []int{}
 }
 
 func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) error {

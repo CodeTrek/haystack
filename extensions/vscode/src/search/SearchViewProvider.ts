@@ -59,11 +59,24 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async _handleOpenFile(file: string, line: number) {
-        const uri = vscode.Uri.file(file);
-        const document = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(document);
-        const position = new vscode.Position(line - 1, 0);
-        editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+        try {
+            // Resolve the full path relative to workspace root
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                throw new Error('No workspace folder found');
+            }
+
+            // Join the workspace path with the file path, handling both absolute and relative paths
+            const fullPath = file.startsWith(workspaceRoot) ? file : vscode.Uri.joinPath(vscode.Uri.file(workspaceRoot), file).fsPath;
+
+            const uri = vscode.Uri.file(fullPath);
+            const document = await vscode.workspace.openTextDocument(uri);
+            const editor = await vscode.window.showTextDocument(document);
+            const position = new vscode.Position(line - 1, 0);
+            editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to open file: ${error}`);
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -135,23 +148,59 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
                     .search-results {
                         margin-top: 8px;
                     }
-                    .result-item {
+                    .search-summary {
+                        font-size: 12px;
+                        color: var(--vscode-descriptionForeground);
+                        margin-bottom: 8px;
+                        padding: 4px 8px;
+                    }
+                    .file-group {
+                        margin-bottom: 12px;
+                        background: var(--vscode-list-inactiveSelectionBackground);
+                        border-radius: 4px;
+                        overflow: hidden;
+                    }
+                    .file-header {
                         padding: 6px 8px;
+                        background: var(--vscode-list-activeSelectionBackground);
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
                         cursor: pointer;
-                        border-radius: 2px;
+                    }
+                    .file-header:hover {
+                        background: var(--vscode-list-activeSelectionBackground);
+                    }
+                    .file-path {
+                        font-size: 12px;
+                        color: var(--vscode-foreground);
+                    }
+                    .match-count {
+                        font-size: 11px;
+                        color: var(--vscode-descriptionForeground);
+                        padding: 2px 6px;
+                        border-radius: 10px;
+                        background: var(--vscode-badge-background);
+                    }
+                    .result-item {
+                        padding: 4px 8px 4px 24px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
                     }
                     .result-item:hover {
                         background: var(--vscode-list-hoverBackground);
                     }
-                    .result-path {
+                    .line-number {
                         font-size: 12px;
                         color: var(--vscode-descriptionForeground);
-                        margin-bottom: 2px;
+                        min-width: 40px;
+                        text-align: right;
                     }
-                    .result-preview {
+                    .line-content {
                         font-family: var(--vscode-editor-font-family);
                         font-size: 13px;
-                        margin-top: 2px;
                         white-space: pre-wrap;
                         overflow-wrap: break-word;
                     }
@@ -222,20 +271,48 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 
                         container.innerHTML = '';
 
+                        // Add search summary
+                        const totalMatches = results.reduce((sum, result) => sum + (result.lines?.length || 0), 0);
+                        const summary = document.createElement('div');
+                        summary.className = 'search-summary';
+                        summary.textContent = \`\${totalMatches} results in \${results.length} files\`;
+                        container.appendChild(summary);
+
+                        // Group results by file
                         results.forEach(result => {
-                            const div = document.createElement('div');
-                            div.className = 'result-item';
-                            div.innerHTML = \`
-                                <div class="result-path">\${result.file}</div>
+                            const fileGroup = document.createElement('div');
+                            fileGroup.className = 'file-group';
+
+                            // File header with path and match count
+                            const fileHeader = document.createElement('div');
+                            fileHeader.className = 'file-header';
+                            fileHeader.innerHTML = \`
+                                <span class="file-path">\${result.file}</span>
+                                <span class="match-count">\${result.lines?.length || 0} matches</span>
                             \`;
-                            div.addEventListener('click', () => {
-                                vscode.postMessage({
-                                    type: 'openFile',
-                                    file: result.file,
-                                    line: result.line
+                            fileGroup.appendChild(fileHeader);
+
+                            // Add matches for this file
+                            if (result.lines) {
+                                result.lines.forEach(match => {
+                                    const matchDiv = document.createElement('div');
+                                    matchDiv.className = 'result-item';
+                                    matchDiv.innerHTML = \`
+                                        <span class="line-number">\${match.line.line_number}</span>
+                                        <span class="line-content">\${match.line.content}</span>
+                                    \`;
+                                    matchDiv.addEventListener('click', () => {
+                                        vscode.postMessage({
+                                            type: 'openFile',
+                                            file: result.file,
+                                            line: match.line.line_number
+                                        });
+                                    });
+                                    fileGroup.appendChild(matchDiv);
                                 });
-                            });
-                            container.appendChild(div);
+                            }
+
+                            container.appendChild(fileGroup);
                         });
                     }
                 </script>

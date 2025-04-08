@@ -37,8 +37,9 @@ type LineMatch struct {
 }
 
 type SearchContentLine struct {
-	LineNumber int    `json:"line_number"`
-	Content    string `json:"content"`
+	LineNumber int     `json:"line_number"`
+	Content    string  `json:"content"`
+	Matches    [][]int `json:"matches,omitempty"`
 }
 
 type SearchContentResult struct {

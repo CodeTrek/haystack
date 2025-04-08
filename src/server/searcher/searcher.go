@@ -151,11 +151,13 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		fileHits := 0
 		for scanner.Scan() {
 			line := scanner.Text()
-			if engine.IsLineMatch(line) {
+			matches := engine.IsLineMatch(line)
+			if len(matches) > 0 {
 				fileMatch.Lines = append(fileMatch.Lines, types.LineMatch{
 					Line: types.SearchContentLine{
 						LineNumber: lineNumber,
 						Content:    line,
+						Matches:    matches,
 					},
 				})
 				fileHits++
