@@ -33,7 +33,7 @@ func processCommand(args []string) {
 		fmt.Println("Version:", running.Version())
 	case "help":
 		if len(args) > 1 {
-			processCommand(append(args[1:], "-h"))
+			processCommand(append(args[1:2], "-h"))
 		} else {
 			printUsage()
 		}
