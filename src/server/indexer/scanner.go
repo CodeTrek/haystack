@@ -3,7 +3,6 @@ package indexer
 import (
 	"container/list"
 	"fmt"
-	"haystack/conf"
 	"haystack/server/core/workspace"
 	"haystack/shared/running"
 	"haystack/utils"
@@ -98,12 +97,8 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	lastTime := time.Now()
 	err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
 		if include.Match(fileInfo.Path, false) {
-			if fileInfo.Size <= conf.Get().Server.MaxFileSize {
-				parser.Add(w, fileInfo.Path)
-				fileCount++
-			} else {
-				log.Printf("File %s (%f MiB) is too large to index, skipping", fileInfo.Path, float64(fileInfo.Size)/1024/1024)
-			}
+			parser.Add(w, fileInfo.Path)
+			fileCount++
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {

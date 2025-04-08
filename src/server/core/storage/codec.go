@@ -9,10 +9,12 @@ import (
 )
 
 const (
-	DocWordsPrefix  = "dw:"
-	DocMetaPrefix   = "dm:"
-	WorkspacePrefix = "ws:"
-	KeywordPrefix   = "kw:"
+	DocWordsPrefix     = "dw:"
+	DocPathWordsPrefix = "dp:"
+	DocMetaPrefix      = "dm:"
+	WorkspacePrefix    = "ws:"
+	KeywordPrefix      = "kw:"
+	PathWordsPrefix    = "pw:"
 )
 
 func EncodeWorkspaceKey(workspaceid string) []byte {

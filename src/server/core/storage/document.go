@@ -18,7 +18,8 @@ type Document struct {
 	ModifiedTime int64  `json:"modified_time"`
 	LastSyncTime int64  `json:"last_sync_time"`
 
-	Words []string `json:"-"`
+	Words     []string `json:"-"` // words in the document content
+	PathWords []string `json:"-"` // words in the document relative-path
 }
 
 // As the Document already breakdown into keywords, we can use the document full-path as the document id
@@ -41,7 +42,8 @@ type WorkspacePendingWrite struct {
 	WorkspaceID string
 
 	// Map of keyword to document ids
-	Keywords map[string]RelatedDocs
+	Keywords  map[string]RelatedDocs
+	PathWords map[string]RelatedDocs
 }
 
 var pendingWrites = map[string]*WorkspacePendingWrite{}
@@ -53,6 +55,7 @@ func getPendingWrite(workspaceid string) *WorkspacePendingWrite {
 		wp = &WorkspacePendingWrite{
 			WorkspaceID: workspaceid,
 			Keywords:    make(map[string]RelatedDocs),
+			PathWords:   make(map[string]RelatedDocs),
 		}
 		pendingWrites[workspaceid] = wp
 	}
@@ -228,6 +231,7 @@ func SaveNewDocuments(workspaceid string, docs []*Document) error {
 	for _, doc := range docs {
 		saveDocument(batch, workspaceid, doc)
 		updateKeywordIndexCached(workspaceid, doc.ID, doc.Words)
+		// TODO: update path words index
 	}
 
 	if err := batch.Commit(); err != nil {

@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"fmt"
-	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"log"
@@ -65,13 +64,13 @@ func AddOrSyncFile(workspace *workspace.Workspace, fullPath string) error {
 
 	if doc == nil {
 		stat, _ := os.Stat(fullPath)
-		if !stat.IsDir() && stat.Size() < conf.Get().Server.MaxFileSize {
+		if !stat.IsDir() {
 			// Add new file to the parser queue
 			parser.Add(workspace, fullPath)
 		}
 	} else {
 		stat, err := os.Stat(fullPath)
-		if err != nil || stat.IsDir() || stat.Size() > conf.Get().Server.MaxFileSize {
+		if err != nil || stat.IsDir() {
 			// Remove the file from the index
 			RemoveFile(workspace, doc.FullPath)
 		} else {

@@ -92,6 +92,11 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		return nil, false, fmt.Errorf("failed to stat file: %w", err)
 	}
 
+	fileSizeExceedLimit := info.Size() > conf.Get().Server.MaxFileSize
+	if fileSizeExceedLimit {
+		log.Printf("File %s (%.2f MiB) is too large to index, skipping", file.FilePath, float64(info.Size())/1024/1024)
+	}
+
 	id := GetDocumentId(fullPath)
 
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
@@ -113,6 +118,12 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		return nil, false, nil
 	}
 
+	words := []string{}
+	if !fileSizeExceedLimit {
+		// We only index the content if the file size is below the limit
+		words = parseString(string(content))
+	}
+
 	return &storage.Document{
 		ID:           id,
 		FullPath:     fullPath,
@@ -120,7 +131,8 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		ModifiedTime: info.ModTime().UnixNano(),
 		LastSyncTime: time.Now().UnixNano(),
 		Hash:         hash,
-		Words:        parseString(string(content)),
+		Words:        words,
+		PathWords:    parseString(file.FilePath),
 	}, existing == nil, nil
 }
 

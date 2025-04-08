@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"haystack/conf"
 	"haystack/server"
 	"haystack/shared/running"
 	"haystack/shared/types"
@@ -55,6 +56,8 @@ func handleServerRun(args []string) {
 	if daemon {
 		running.StartNewServer()
 	} else {
+		// For debugging, we print the logs to the stdout
+		conf.Get().Server.LoggingStdout = true
 		server.Run()
 	}
 }
