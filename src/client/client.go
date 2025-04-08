@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"haystack/conf"
 	"haystack/shared/types"
 )
 
@@ -31,6 +32,8 @@ func Run() {
 	switch command {
 	case "search":
 		handleSearch(os.Args[2:])
+	case "version":
+		fmt.Println("Version:", conf.Version())
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()

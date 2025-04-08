@@ -66,7 +66,17 @@ type Conf struct {
 
 var conf *Conf
 
-func checkMode() {
+var version = "dev"
+
+func SetVersion(ver string) {
+	if len(version) > 0 {
+		return
+	}
+	version = ver
+}
+
+func Version() string {
+	return version
 }
 
 func Get() *Conf {

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"haystack/conf"
 	"haystack/shared/running"
 	"net/http"
 	"os"
@@ -77,8 +78,9 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 		Data    struct {
-			Running bool `json:"running"`
-			PID     int  `json:"pid"`
+			Running bool   `json:"running"`
+			PID     int    `json:"pid"`
+			Version string `json:"version"`
 		} `json:"status"`
 	}
 
@@ -86,11 +88,13 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		Code:    0,
 		Message: "status",
 		Data: struct {
-			Running bool `json:"running"`
-			PID     int  `json:"pid"`
+			Running bool   `json:"running"`
+			PID     int    `json:"pid"`
+			Version string `json:"version"`
 		}{
 			Running: !running.IsShuttingDown(),
 			PID:     os.Getpid(),
+			Version: conf.Version(),
 		},
 	}
 

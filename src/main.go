@@ -11,7 +11,11 @@ import (
 	"path/filepath"
 )
 
+var version = "dev"
+
 func main() {
+	conf.SetVersion(version)
+
 	flag.Parse()
 	if err := running.Init(); err != nil {
 		os.Exit(1)
