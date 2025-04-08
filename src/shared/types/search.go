@@ -47,11 +47,13 @@ type SearchContentResult struct {
 	Truncate bool        `json:"truncate,omitempty"`
 }
 
+type SearchContentResults struct {
+	Results  []SearchContentResult `json:"results,omitempty"`
+	Truncate bool                  `json:"truncate,omitempty"`
+}
+
 type SearchContentResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    struct {
-		Results  []SearchContentResult `json:"results,omitempty"`
-		Truncate bool                  `json:"truncate,omitempty"`
-	} `json:"data,omitempty"`
+	Code    int                  `json:"code"`
+	Message string               `json:"message"`
+	Data    SearchContentResults `json:"data,omitempty"`
 }

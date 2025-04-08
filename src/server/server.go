@@ -10,11 +10,12 @@ import (
 	"haystack/server/server"
 	"haystack/shared/running"
 	"log"
+	"strings"
 	"sync"
 )
 
-func Run(lockFile string) {
-	cleanup, err := running.CheckAndLockServer(lockFile)
+func Run() {
+	cleanup, err := running.CheckAndLockServer()
 	if err != nil {
 		log.Fatal("Error locking and running as server:", err)
 		return
@@ -23,6 +24,7 @@ func Run(lockFile string) {
 
 	initLog()
 
+	log.Println(strings.Repeat("=", 64))
 	log.Println("Starting haystack server...")
 
 	wg := &sync.WaitGroup{}

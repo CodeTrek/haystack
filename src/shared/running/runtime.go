@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -28,4 +29,17 @@ func UserHomeDir() string {
 
 func IsServerMode() bool {
 	return *serverMode
+}
+
+func ExecutableName() string {
+	return filepath.Base(Executable())
+}
+
+func Executable() string {
+	executable, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Failed to get executable path: %v", err)
+		return ""
+	}
+	return executable
 }

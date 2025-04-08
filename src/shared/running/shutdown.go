@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -71,6 +72,12 @@ func StartNewServer() {
 		Dir:   wd,
 		Files: []*os.File{nil, os.Stdout, os.Stderr},
 		Env:   os.Environ(),
+	}
+
+	if args[0] != "--server" {
+		// starting from client, need to start server with --server flag and set working directory to executable directory
+		args = []string{"--server"}
+		procAttr.Dir = filepath.Dir(executable)
 	}
 
 	process, err := os.StartProcess(executable, append([]string{executable}, args...), procAttr)

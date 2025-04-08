@@ -25,9 +25,12 @@ func main() {
 		log.Fatal("Error loading config:", err)
 		return
 	}
+
 	lockFile := filepath.Join(conf.Get().Global.HomePath, "server.lock")
+	running.RegisterLockFile(lockFile)
+
 	if running.IsServerMode() {
-		server.Run(lockFile)
+		server.Run()
 		if running.IsRestart() {
 			running.StartNewServer()
 		}

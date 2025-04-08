@@ -85,16 +85,14 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleListWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	workspaces := workspace.GetAll()
 	json.NewEncoder(w).Encode(types.ListWorkspaceResponse{
 		Code:    0,
 		Message: "Ok",
-		Data: struct {
-			Workspaces []string `json:"workspaces"`
-		}{
-			Workspaces: workspaces,
+		Data: types.Workspaces{
+			Workspaces: workspace.GetAll(),
 		},
 	})
 }

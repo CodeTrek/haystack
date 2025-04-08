@@ -19,6 +19,9 @@ const (
 
 	DefaultMaxResults        = 5000
 	DefaultMaxResultsPerFile = 500
+
+	DefaultClientMaxResults        = 500
+	DefaultClientMaxResultsPerFile = 50
 )
 
 var (
@@ -43,6 +46,8 @@ type Global struct {
 }
 
 type Client struct {
+	DefaultWorkspace string            `yaml:"default_workspace"`
+	DefaultLimit     types.SearchLimit `yaml:"default_limit"`
 }
 
 type Server struct {
@@ -106,7 +111,13 @@ func Load() error {
 			HomePath: homePath,
 			Port:     DefaultPort,
 		},
-		Client: Client{},
+		Client: Client{
+			DefaultWorkspace: "",
+			DefaultLimit: types.SearchLimit{
+				MaxResults:        DefaultClientMaxResults,
+				MaxResultsPerFile: DefaultClientMaxResultsPerFile,
+			},
+		},
 		Server: Server{
 			MaxFileSize:  DefaultMaxFileSize,
 			IndexWorkers: DefaultIndexWorkers,
@@ -151,6 +162,16 @@ func Load() error {
 
 	if conf.Server.SearchLimit.MaxResultsPerFile <= 0 || conf.Server.SearchLimit.MaxResultsPerFile > DefaultMaxResultsPerFile {
 		conf.Server.SearchLimit.MaxResultsPerFile = DefaultMaxResultsPerFile
+	}
+
+	if conf.Client.DefaultLimit.MaxResults <= 0 ||
+		conf.Client.DefaultLimit.MaxResults > conf.Server.SearchLimit.MaxResults {
+		conf.Client.DefaultLimit.MaxResults = DefaultClientMaxResults
+	}
+
+	if conf.Client.DefaultLimit.MaxResultsPerFile <= 0 ||
+		conf.Client.DefaultLimit.MaxResultsPerFile > conf.Server.SearchLimit.MaxResultsPerFile {
+		conf.Client.DefaultLimit.MaxResultsPerFile = DefaultClientMaxResultsPerFile
 	}
 
 	return nil

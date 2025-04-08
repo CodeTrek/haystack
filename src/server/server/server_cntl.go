@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"haystack/conf"
 	"haystack/shared/running"
+	"haystack/shared/types"
 	"net/http"
 	"os"
 )
@@ -75,26 +76,19 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	type StatusResponse struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Data    struct {
-			Running bool   `json:"running"`
-			PID     int    `json:"pid"`
-			Version string `json:"version"`
-		} `json:"status"`
+		Code    int                `json:"code"`
+		Message string             `json:"message"`
+		Data    types.ServerStatus `json:"data"`
 	}
 
 	response := StatusResponse{
 		Code:    0,
-		Message: "status",
-		Data: struct {
-			Running bool   `json:"running"`
-			PID     int    `json:"pid"`
-			Version string `json:"version"`
-		}{
-			Running: !running.IsShuttingDown(),
-			PID:     os.Getpid(),
-			Version: conf.Version(),
+		Message: "Ok",
+		Data: types.ServerStatus{
+			ShuttingDown: running.IsShuttingDown(),
+			Restarting:   running.IsRestart(),
+			PID:          os.Getpid(),
+			Version:      conf.Version(),
 		},
 	}
 

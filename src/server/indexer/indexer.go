@@ -29,7 +29,7 @@ func Run(wg *sync.WaitGroup) {
 }
 
 func RefreshIndexIfNeeded() {
-	workspacePaths := workspace.GetAll()
+	workspacePaths := workspace.GetAllPaths()
 	for _, w := range workspacePaths {
 		SyncIfNeeded(w)
 	}

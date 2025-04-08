@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"haystack/conf"
 	"haystack/server/core/storage"
+	"haystack/shared/types"
 	"haystack/utils"
 	"log"
 	"os"
@@ -33,13 +34,31 @@ type Workspace struct {
 	Mutex sync.Mutex `json:"-"`
 }
 
-func GetAll() []string {
+func GetAllPaths() []string {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	result := []string{}
 	for _, workspace := range workspaces {
 		result = append(result, workspace.Path)
+	}
+
+	return result
+}
+
+func GetAll() []types.Workspace {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	result := []types.Workspace{}
+	for _, workspace := range workspaces {
+		result = append(result, types.Workspace{
+			ID:           workspace.ID,
+			Path:         workspace.Path,
+			CreatedAt:    workspace.CreatedAt,
+			LastAccessed: workspace.LastAccessed,
+			LastFullSync: workspace.LastFullSync,
+		})
 	}
 
 	return result

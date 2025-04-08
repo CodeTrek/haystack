@@ -1,6 +1,7 @@
 package running
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,7 +9,23 @@ import (
 	"github.com/gofrs/flock"
 )
 
-func CheckAndLockServer(lockFile string) (func(), error) {
+var (
+	lockFile   string
+	ErrRunning = errors.New("server is running")
+)
+
+func RegisterLockFile(file string) {
+	if len(lockFile) > 0 {
+		return
+	}
+	lockFile = file
+}
+
+func CheckAndLockServer() (func(), error) {
+	if len(lockFile) == 0 {
+		return nil, fmt.Errorf("lock file not registered")
+	}
+
 	// Ensure the directory exists
 	dir := filepath.Dir(lockFile)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -24,7 +41,7 @@ func CheckAndLockServer(lockFile string) (func(), error) {
 		return nil, fmt.Errorf("failed to acquire lock: %v", err)
 	}
 	if !locked {
-		return nil, fmt.Errorf("another instance is already running")
+		return nil, ErrRunning
 	}
 
 	// Return cleanup function
@@ -34,4 +51,14 @@ func CheckAndLockServer(lockFile string) (func(), error) {
 	}
 
 	return cleanup, nil
+}
+
+func IsServerRunning() bool {
+	cancel, err := CheckAndLockServer()
+	if err != nil {
+		return err == ErrRunning
+	}
+
+	cancel()
+	return false
 }
