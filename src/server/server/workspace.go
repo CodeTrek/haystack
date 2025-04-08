@@ -96,3 +96,46 @@ func handleListWorkspace(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+func handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	var request types.GetWorkspaceRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ws, err := workspace.GetByPath(request.Workspace)
+	if err != nil {
+		json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
+			Code:    1,
+			Message: "Not found",
+		})
+		return
+	}
+
+	ws.Mutex.Lock()
+	totalFiles := ws.TotalFiles
+	indexing := ws.IndexingStatus != nil
+	if totalFiles == 0 && indexing {
+		totalFiles = ws.IndexingStatus.TotalFiles
+	}
+	ws.Mutex.Unlock()
+
+	json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
+		Code:    0,
+		Message: "Ok",
+		Data: &types.Workspace{
+			ID:           ws.ID,
+			Path:         ws.Path,
+			TotalFiles:   totalFiles,
+			CreatedAt:    ws.CreatedAt,
+			LastAccessed: ws.LastAccessed,
+			LastFullSync: ws.LastFullSync,
+			Indexing:     indexing,
+		},
+	})
+}

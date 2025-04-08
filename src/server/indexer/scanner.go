@@ -99,6 +99,10 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 		if include.Match(fileInfo.Path, false) {
 			parser.Add(w, fileInfo.Path)
 			fileCount++
+
+			w.Mutex.Lock()
+			w.IndexingStatus.TotalFiles++
+			w.Mutex.Unlock()
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {
@@ -147,12 +151,16 @@ func (s *Scanner) Add(w *workspace.Workspace) error {
 
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
-	if w.Indexing != nil {
+	if w.IndexingStatus != nil {
 		return fmt.Errorf("workspace is already being indexed")
 	}
 
 	now := time.Now()
-	w.Indexing = &now
+	w.IndexingStatus = &workspace.IndexingStatus{
+		StartedAt:    &now,
+		TotalFiles:   0,
+		IndexedFiles: 0,
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

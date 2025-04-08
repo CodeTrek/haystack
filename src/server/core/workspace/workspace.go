@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -18,18 +20,25 @@ var mutex sync.Mutex
 var workspaces map[string]*Workspace
 var workspacePaths map[string]*Workspace
 
+type IndexingStatus struct {
+	StartedAt    *time.Time
+	TotalFiles   int
+	IndexedFiles int
+}
+
 type Workspace struct {
 	ID               string        `json:"id"`
 	Path             string        `json:"path"`
 	UseGlobalFilters bool          `json:"use_global_filters"`
 	Filters          *conf.Filters `json:"filters" optional:"true"`
+	TotalFiles       int           `json:"total_files"`
 
 	CreatedAt    time.Time `json:"created_time"`
 	LastAccessed time.Time `json:"last_accessed_time"`
 	LastFullSync time.Time `json:"last_full_sync_time"`
 
-	Indexing *time.Time `json:"-"`
-	Deleted  bool       `json:"-"`
+	IndexingStatus *IndexingStatus `json:"-"`
+	Deleted        bool            `json:"-"`
 
 	Mutex sync.Mutex `json:"-"`
 }
@@ -52,14 +61,31 @@ func GetAll() []types.Workspace {
 
 	result := []types.Workspace{}
 	for _, workspace := range workspaces {
+		workspace.Mutex.Lock()
+
+		totalFiles := workspace.TotalFiles
+		if totalFiles == 0 && workspace.IndexingStatus != nil {
+			totalFiles = workspace.IndexingStatus.TotalFiles
+		}
+
 		result = append(result, types.Workspace{
 			ID:           workspace.ID,
 			Path:         workspace.Path,
 			CreatedAt:    workspace.CreatedAt,
+			TotalFiles:   totalFiles,
 			LastAccessed: workspace.LastAccessed,
 			LastFullSync: workspace.LastFullSync,
+			Indexing:     workspace.IndexingStatus != nil,
 		})
+
+		workspace.Mutex.Unlock()
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		ri, _ := strconv.Atoi(result[i].ID)
+		rj, _ := strconv.Atoi(result[j].ID)
+		return ri < rj
+	})
 
 	return result
 }
@@ -89,6 +115,9 @@ func Get(workspaceId string) (*Workspace, error) {
 }
 
 func (w *Workspace) Save() error {
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+
 	json, err := w.serialize()
 	if err != nil {
 		return err
@@ -101,7 +130,11 @@ func (w *Workspace) UpdateLastFullSync() {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 
-	w.Indexing = nil
+	if w.IndexingStatus != nil {
+		w.TotalFiles = w.IndexingStatus.TotalFiles
+		w.IndexingStatus = nil
+	}
+
 	w.LastFullSync = time.Now()
 }
 

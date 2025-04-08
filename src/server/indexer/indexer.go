@@ -86,6 +86,12 @@ func RemoveFile(workspace *workspace.Workspace, filePath string) error {
 	docid := GetDocumentId(filePath)
 
 	storage.DeleteDocument(workspace.ID, docid)
+
+	workspace.Mutex.Lock()
+	workspace.TotalFiles--
+	workspace.Mutex.Unlock()
+
+	workspace.Save()
 	return nil
 }
 
