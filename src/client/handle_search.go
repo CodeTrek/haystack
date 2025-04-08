@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"haystack/conf"
+	"haystack/shared/running"
 	"haystack/shared/types"
 	"strings"
 )
@@ -22,8 +23,8 @@ func handleSearch(args []string) {
 	workspace := searchCmd.String("workspace", conf.Get().Client.DefaultWorkspace, "Workspace path to search in")
 	caseSensitive := searchCmd.Bool("case-sensitive", false, "Enable case-sensitive search")
 
-	if len(args) < 1 || args[0] == "-h" {
-		fmt.Println("Usage: haystack.exe search <query> [options]")
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+		fmt.Println("Usage: " + running.ExecutableName() + " search <query> [options]")
 		fmt.Println("Options:")
 		searchCmd.PrintDefaults()
 		return
@@ -37,7 +38,7 @@ func handleSearch(args []string) {
 
 	if query == "" {
 		fmt.Println("Error: Search query cannot be empty")
-		fmt.Println("Usage: haystack.exe search [options] <query>")
+		fmt.Println("Usage: " + running.ExecutableName() + " search [options] <query>")
 		fmt.Println("Options:")
 		searchCmd.PrintDefaults()
 		return

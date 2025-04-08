@@ -3,19 +3,22 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"haystack/server"
 	"haystack/shared/running"
 	"haystack/shared/types"
 	"time"
 )
 
 func handleServer(args []string) {
-	if len(args) < 1 || args[0] == "-h" {
+	if len(args) < 1 || args[0] == "-h" || args[0] == "--help" {
 		fmt.Println("Usage: " + running.ExecutableName() + " server <command>")
 		fmt.Println("Commands:")
-		fmt.Println("  status    Show server status")
-		fmt.Println("  start     Start the server")
-		fmt.Println("  stop      Stop the server")
-		fmt.Println("  restart   Restart the server")
+		fmt.Println("  status         Show server status")
+		fmt.Println("  start          Start the server")
+		fmt.Println("  stop           Stop the server")
+		fmt.Println("  restart        Restart the server")
+		fmt.Println("  run [options]  Run the server")
+		fmt.Println("    -d           Run the server in daemon mode")
 		return
 	}
 
@@ -29,9 +32,30 @@ func handleServer(args []string) {
 		handleServerStop()
 	case "restart":
 		handleServerRestart()
+	case "run":
+		handleServerRun(args[1:])
 	default:
 		fmt.Printf("Unknown server command: %s\n", command)
 		fmt.Println("Available commands: status, start, stop, restart")
+	}
+}
+
+func handleServerRun(args []string) {
+	daemon := false
+	for _, arg := range args {
+		if arg == "-d" {
+			daemon = true
+		} else {
+			fmt.Printf("Unknown option: %s\n", arg)
+			fmt.Println("Available options: -d")
+			return
+		}
+	}
+
+	if daemon {
+		running.StartNewServer()
+	} else {
+		server.Run()
 	}
 }
 

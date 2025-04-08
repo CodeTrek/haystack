@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"haystack/conf"
 	"haystack/shared/running"
 )
 
@@ -28,8 +27,10 @@ func processCommand(args []string) {
 		handleWorkspace(args[1:])
 	case "server":
 		handleServer(args[1:])
+	case "install":
+		handleInstall(args[1:])
 	case "version":
-		fmt.Println("Version:", conf.Version())
+		fmt.Println("Version:", running.Version())
 	case "help":
 		if len(args) > 1 {
 			processCommand(append(args[1:], "-h"))
@@ -49,5 +50,6 @@ func printUsage() {
 	fmt.Println("  search <query>        Search for documents matching the query")
 	fmt.Println("  server <commands>     Server commands")
 	fmt.Println("  workspace <commands>  Workspace commands")
+	fmt.Println("  install               Install commands")
 	fmt.Println("  help <command>        Show help for a specific command")
 }

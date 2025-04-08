@@ -12,7 +12,8 @@
       "program": "${workspaceFolder}/src/main.go",
       "env": {},
       "args": [
-        "--server"
+        "server",
+        "run"
       ],
       "showLog": true
     },

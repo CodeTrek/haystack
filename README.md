@@ -61,7 +61,7 @@ Edit `config.local.yaml` to configure your indexing preferences.
 ### Running the Server
 
 ```bash
-go run ./ --server
+go run ./ server run
 ```
 
 ### Using the Client

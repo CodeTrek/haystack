@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"haystack/conf"
 	"haystack/shared/running"
 	"haystack/shared/types"
 	"net/http"
@@ -88,7 +87,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			ShuttingDown: running.IsShuttingDown(),
 			Restarting:   running.IsRestart(),
 			PID:          os.Getpid(),
-			Version:      conf.Version(),
+			Version:      running.Version(),
 		},
 	}
 

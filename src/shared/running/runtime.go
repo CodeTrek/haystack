@@ -9,8 +9,24 @@ import (
 
 var (
 	userHomeDir string
-	serverMode  = flag.Bool("server", false, "Run in server mode")
+	daemonMode  = flag.Bool("daemon", false, "Run in daemon mode")
+	version     string
 )
+
+func SetVersion(ver string) {
+	if len(version) > 0 {
+		return
+	}
+	version = ver
+}
+
+func Version() string {
+	return version
+}
+
+func IsDevVersion() bool {
+	return version == "dev"
+}
 
 func Init() error {
 	var err error
@@ -27,8 +43,8 @@ func UserHomeDir() string {
 	return userHomeDir
 }
 
-func IsServerMode() bool {
-	return *serverMode
+func IsDaemonMode() bool {
+	return *daemonMode
 }
 
 func ExecutableName() string {
@@ -42,4 +58,39 @@ func Executable() string {
 		return ""
 	}
 	return executable
+}
+
+func StartNewServer() {
+	executable, err := os.Executable()
+	if err != nil {
+		log.Printf("Failed to get executable path: %v", err)
+		return
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Failed to get working directory: %v", err)
+		return
+	}
+
+	args := os.Args[1:]
+	procAttr := &os.ProcAttr{
+		Dir:   wd,
+		Files: []*os.File{nil, os.Stdout, os.Stderr},
+		Env:   os.Environ(),
+	}
+
+	if args[0] != "--daemon" {
+		// starting from client, need to start server with --daemon flag and set working directory to executable directory
+		args = []string{"--daemon"}
+		procAttr.Dir = filepath.Dir(executable)
+	}
+
+	process, err := os.StartProcess(executable, append([]string{executable}, args...), procAttr)
+	if err != nil {
+		log.Printf("Failed to start new process: %v", err)
+		return
+	}
+
+	log.Printf("Started new process with PID: %d", process.Pid)
 }

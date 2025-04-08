@@ -8,7 +8,7 @@ import (
 )
 
 func handleWorkspace(args []string) {
-	if len(args) < 1 || args[0] == "-h" {
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
 		fmt.Println("Usage: " + running.ExecutableName() + " workspace <command>")
 		fmt.Println("Commands:")
 		fmt.Println("  list      List workspaces")

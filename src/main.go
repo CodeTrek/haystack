@@ -14,7 +14,7 @@ import (
 var version = "dev"
 
 func main() {
-	conf.SetVersion(version)
+	running.SetVersion(version)
 
 	flag.Parse()
 	if err := running.Init(); err != nil {
@@ -29,7 +29,7 @@ func main() {
 	lockFile := filepath.Join(conf.Get().Global.HomePath, "server.lock")
 	running.RegisterLockFile(lockFile)
 
-	if running.IsServerMode() {
+	if running.IsDaemonMode() {
 		server.Run()
 		if running.IsRestart() {
 			running.StartNewServer()
