@@ -115,10 +115,7 @@ func Get(workspaceId string) (*Workspace, error) {
 }
 
 func (w *Workspace) Save() error {
-	w.Mutex.Lock()
-	defer w.Mutex.Unlock()
-
-	json, err := w.serialize()
+	json, err := w.Serialize()
 	if err != nil {
 		return err
 	}
@@ -222,7 +219,7 @@ func GetOrCreate(workspacePath string) (*Workspace, error) {
 	return workspace, nil
 }
 
-func (w *Workspace) serialize() ([]byte, error) {
+func (w *Workspace) Serialize() ([]byte, error) {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 
