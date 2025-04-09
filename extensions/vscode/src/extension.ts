@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 import { SearchViewProvider } from './search/SearchViewProvider';
 import { HaystackProvider } from './search/haystackProvider';
 
+let haystackProvider: HaystackProvider | undefined;
+
 export async function activate(context: vscode.ExtensionContext) {
-    const haystackProvider = new HaystackProvider();
+    haystackProvider = new HaystackProvider();
     const searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider);
 
     // Create workspace when extension is activated
@@ -30,13 +32,28 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
             if (event.added.length > 0) {
                 try {
-                    await haystackProvider.createWorkspace();
+                    await haystackProvider?.createWorkspace();
                 } catch (error) {
                     vscode.window.showErrorMessage(`Failed to create workspace: ${error}`);
                 }
             }
         })
     );
+
+    // Add provider to subscriptions for proper cleanup
+    context.subscriptions.push({
+        dispose: () => {
+            if (haystackProvider) {
+                haystackProvider.dispose();
+                haystackProvider = undefined;
+            }
+        }
+    });
 }
 
-export function deactivate() {}
+export function deactivate() {
+    if (haystackProvider) {
+        haystackProvider.dispose();
+        haystackProvider = undefined;
+    }
+}

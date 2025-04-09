@@ -6,6 +6,7 @@ import (
 	"haystack/server/core/workspace"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -55,7 +56,8 @@ func SyncIfNeeded(workspacePath string) error {
 	return nil
 }
 
-func AddOrSyncFile(workspace *workspace.Workspace, fullPath string) error {
+func AddOrSyncFile(workspace *workspace.Workspace, relPath string) error {
+	fullPath := filepath.Join(workspace.Path, relPath)
 	docid := GetDocumentId(fullPath)
 	doc, err := storage.GetDocument(workspace.ID, docid, false)
 	if err != nil {
@@ -63,27 +65,31 @@ func AddOrSyncFile(workspace *workspace.Workspace, fullPath string) error {
 	}
 
 	if doc == nil {
-		stat, _ := os.Stat(fullPath)
-		if !stat.IsDir() {
-			// Add new file to the parser queue
-			parser.Add(workspace, fullPath)
+		stat, err := os.Stat(fullPath)
+		if err != nil || stat.IsDir() {
+			return err
 		}
+
+		// Add new file to the parser queue
+		parser.Add(workspace, relPath)
 	} else {
 		stat, err := os.Stat(fullPath)
 		if err != nil || stat.IsDir() {
 			// Remove the file from the index
-			RemoveFile(workspace, doc.FullPath)
+			RemoveFile(workspace, relPath)
 		} else {
 			// Sync existing file to the parser queue
-			parser.Add(workspace, fullPath)
+			parser.Add(workspace, relPath)
 		}
 	}
 
 	return nil
 }
 
-func RemoveFile(workspace *workspace.Workspace, filePath string) error {
-	docid := GetDocumentId(filePath)
+func RemoveFile(workspace *workspace.Workspace, relPath string) error {
+	fullPath := filepath.Join(workspace.Path, relPath)
+
+	docid := GetDocumentId(fullPath)
 
 	storage.DeleteDocument(workspace.ID, docid)
 
@@ -103,18 +109,22 @@ func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) 
 
 	removedDocs := []string{}
 	for _, doc := range docs {
-		stat, err := os.Stat(doc.FullPath)
+		relPath, err := filepath.Rel(workspace.Path, doc.FullPath)
+		if err != nil {
+			continue
+		}
 
+		stat, err := os.Stat(doc.FullPath)
 		// If the file becomes a directory or there is an error, remove it
 		if err != nil || stat.IsDir() {
-			RemoveFile(workspace, doc.FullPath)
+			RemoveFile(workspace, relPath)
 			removedDocs = append(removedDocs, doc.ID)
 			continue
 		}
 
 		// If the file has been modified, add it to the parser queue
 		if stat.ModTime().UnixNano() != doc.ModifiedTime {
-			parser.Add(workspace, doc.FullPath)
+			parser.Add(workspace, relPath)
 		}
 	}
 

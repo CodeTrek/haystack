@@ -18,11 +18,20 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic: %v", r)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	ws, _ := workspace.GetByPath(request.Workspace)
 	if ws != nil {
+		log.Printf("Create workspace `%s`: already exists", request.Workspace)
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    0,
 			Message: "Workspace already exists",
@@ -32,6 +41,7 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	ws, err = workspace.GetOrCreate(request.Workspace)
 	if err != nil {
+		log.Printf("Create workspace `%s`: failed to get or create: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,
 			Message: fmt.Sprintf("Failed to create workspace: %v", err),
@@ -41,8 +51,7 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	indexer.SyncIfNeeded(ws.Path)
 
-	log.Printf("Created workspace %s", request.Workspace)
-
+	log.Printf("Created workspace `%s`", request.Workspace)
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,
 		Message: "Ok",
@@ -62,6 +71,7 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := workspace.GetByPath(request.Workspace)
 	if err != nil {
+		log.Printf("Delete workspace `%s`: failed to get: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,
 			Message: fmt.Sprintf("Failed to delete workspace: %v", err),
@@ -71,6 +81,7 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	err = ws.Delete()
 	if err != nil {
+		log.Printf("Delete workspace `%s`: failed to delete: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
 			Code:    1,
 			Message: fmt.Sprintf("Failed to delete workspace: %v", err),
@@ -78,6 +89,7 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Deleted workspace `%s`", request.Workspace)
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,
 		Message: "Ok",
@@ -85,6 +97,14 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleListWorkspace(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic: %v", r)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -110,6 +130,7 @@ func handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := workspace.GetByPath(request.Workspace)
 	if err != nil {
+		log.Printf("Get workspace `%s`: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
 			Code:    1,
 			Message: "Not found",
@@ -124,6 +145,8 @@ func handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
 		totalFiles = ws.IndexingStatus.TotalFiles
 	}
 	ws.Mutex.Unlock()
+
+	log.Printf("Get workspace `%s`: %v", request.Workspace, ws)
 
 	json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
 		Code:    0,

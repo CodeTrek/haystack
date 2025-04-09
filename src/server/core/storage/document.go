@@ -75,9 +75,9 @@ func flushPendingWrites(closing bool) {
 	docsCount := 0
 	for _, wp := range pendingWrites {
 		for kw, relatedDocs := range wp.Keywords {
-			// Skip the keyword if it has been updated in the last 5 seconds
-			// and has less than 30 documents
-			if !closing && len(relatedDocs.DocIds) < 30 && time.Since(relatedDocs.UpdatedAt) < 5*time.Second {
+			// Skip the keyword if it has been updated in the last 1 seconds
+			// and has less than 50 documents
+			if !closing && len(relatedDocs.DocIds) < 50 && time.Since(relatedDocs.UpdatedAt) < 1*time.Second {
 				continue
 			}
 

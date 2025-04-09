@@ -9,8 +9,18 @@
   "engines": {
     "vscode": "^1.89.0"
   },
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "extensionKind": [
+    "workspace",
+    "ui"
+  ],
   "activationEvents": [
-    "onView:haystackSearch"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "scripts": {

@@ -83,10 +83,10 @@ func (p *Parser) processFile(file ParseFile) error {
 }
 
 // Add queues a file for parsing
-func (p *Parser) Add(workspace *workspace.Workspace, fullPath string) {
+func (p *Parser) Add(workspace *workspace.Workspace, relPath string) {
 	p.ch <- ParseFile{
 		Workspace: workspace,
-		FilePath:  fullPath,
+		FilePath:  relPath,
 	}
 }
 

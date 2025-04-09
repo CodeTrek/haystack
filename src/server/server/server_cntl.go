@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"haystack/shared/running"
 	"haystack/shared/types"
+	"log"
 	"net/http"
 	"os"
 )
@@ -29,6 +30,13 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // handleRestart handles the restart endpoint
 // It will restart the server by calling the restart function
 func handleRestart(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic: %v", r)
+			return
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -44,6 +52,7 @@ func handleRestart(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(response)
 
+	log.Println("Server restart requested")
 	running.Restart()
 }
 
@@ -65,6 +74,7 @@ func handleStop(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(response)
 
+	log.Println("Server stop requested")
 	running.Shutdown()
 }
 

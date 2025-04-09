@@ -7,7 +7,6 @@ import (
 	"haystack/shared/types"
 	"log"
 	"net/http"
-	"path/filepath"
 )
 
 func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +26,18 @@ func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	indexer.AddOrSyncFile(workspace, filepath.Join(workspace.Path, request.Path))
+	err = indexer.AddOrSyncFile(workspace, request.Path)
+	if err != nil {
+		log.Printf("Failed to update `%s` in workspace `%s`: %v", request.Path, workspace.Path, err)
 
-	log.Printf("Updated document %s in workspace %s", request.Path, request.Workspace)
+		json.NewEncoder(w).Encode(types.CommonResponse{
+			Code:    1,
+			Message: err.Error(),
+		})
+		return
+	}
 
+	log.Printf("Updated `%s` in workspace `%s`", request.Path, workspace.Path)
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,
 		Message: "Ok",
@@ -54,8 +61,8 @@ func handleDeleteDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	indexer.RemoveFile(workspace, filepath.Join(workspace.Path, request.Path))
-	log.Printf("Deleted document %s in workspace %s", request.Path, request.Workspace)
+	indexer.RemoveFile(workspace, request.Path)
+	log.Printf("Deleted `%s` in workspace `%s`", request.Path, workspace.Path)
 
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,

@@ -152,7 +152,7 @@ func (s *Scanner) Add(w *workspace.Workspace) error {
 	w.Mutex.Lock()
 	defer w.Mutex.Unlock()
 	if w.IndexingStatus != nil {
-		return fmt.Errorf("workspace is already being indexed")
+		return fmt.Errorf("workspace is indexing")
 	}
 
 	now := time.Now()
