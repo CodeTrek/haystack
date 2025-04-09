@@ -50,7 +50,7 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		}
 	}
 
-	limit := conf.Get().Server.SearchLimit
+	limit := conf.Get().Server.Search.Limit
 	if req.Limit != nil {
 		if req.Limit.MaxResults > 0 && req.Limit.MaxResults < limit.MaxResults {
 			limit.MaxResults = req.Limit.MaxResults
@@ -153,15 +153,17 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 			line := scanner.Text()
 			matches := engine.IsLineMatch(line)
 			if len(matches) > 0 {
-				fileMatch.Lines = append(fileMatch.Lines, types.LineMatch{
-					Line: types.SearchContentLine{
-						LineNumber: lineNumber,
-						Content:    line,
-						Matches:    matches,
-					},
-				})
+				for _, match := range matches {
+					fileMatch.Lines = append(fileMatch.Lines, types.LineMatch{
+						Line: types.SearchContentLine{
+							LineNumber: lineNumber,
+							Content:    line,
+							Match:      match,
+						},
+					})
+					totalHits++
+				}
 				fileHits++
-				totalHits++
 				if fileHits >= limit.MaxResultsPerFile {
 					fileMatch.Truncate = true
 					break

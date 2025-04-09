@@ -38,7 +38,7 @@ export interface SearchContentRequest {
 export interface SearchContentLine {
     line_number: number;
     content: string;
-    matches?: number[][];
+    match?: number[];
 }
 
 export interface LineMatch {

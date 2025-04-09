@@ -46,7 +46,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
                 caseSensitive: options.caseSensitive,
                 include: options.include,
                 exclude: options.exclude,
-                maxResults: options.maxResults || 100
+                maxResults: options.maxResults || 200
             });
 
             webview.postMessage({

@@ -22,6 +22,9 @@ const (
 
 	DefaultClientMaxResults        = 500
 	DefaultClientMaxResultsPerFile = 50
+
+	DefaultMaxSearchWildcardLength  = 24
+	DefaultMaxSearchKeywordDistance = 32
 )
 
 var (
@@ -50,11 +53,17 @@ type Client struct {
 	DefaultLimit     types.SearchLimit `yaml:"default_limit"`
 }
 
+type Search struct {
+	MaxWildcardLength  int               `yaml:"max_wildcard_length"`
+	MaxKeywordDistance int               `yaml:"max_keyword_distance"`
+	Limit              types.SearchLimit `yaml:"limit"`
+}
+
 type Server struct {
-	MaxFileSize  int64             `yaml:"max_file_size"`
-	IndexWorkers int               `yaml:"index_workers"`
-	Filters      Filters           `yaml:"filters"`
-	SearchLimit  types.SearchLimit `yaml:"search_limit"`
+	MaxFileSize  int64   `yaml:"max_file_size"`
+	IndexWorkers int     `yaml:"index_workers"`
+	Filters      Filters `yaml:"filters"`
+	Search       Search  `yaml:"search"`
 
 	LoggingStdout bool `yaml:"logging_stdout"`
 }
@@ -108,9 +117,13 @@ func Load() error {
 		Server: Server{
 			MaxFileSize:  DefaultMaxFileSize,
 			IndexWorkers: DefaultIndexWorkers,
-			SearchLimit: types.SearchLimit{
-				MaxResults:        DefaultMaxResults,
-				MaxResultsPerFile: DefaultMaxResultsPerFile,
+			Search: Search{
+				MaxWildcardLength:  DefaultMaxSearchWildcardLength,
+				MaxKeywordDistance: DefaultMaxSearchKeywordDistance,
+				Limit: types.SearchLimit{
+					MaxResults:        DefaultMaxResults,
+					MaxResultsPerFile: DefaultMaxResultsPerFile,
+				},
 			},
 		},
 	}
@@ -143,21 +156,32 @@ func Load() error {
 		conf.Global.Port = DefaultPort
 	}
 
-	if conf.Server.SearchLimit.MaxResults <= 0 || conf.Server.SearchLimit.MaxResults > DefaultMaxResults {
-		conf.Server.SearchLimit.MaxResults = DefaultMaxResults
+	if conf.Server.Search.Limit.MaxResults <= 0 || conf.Server.Search.Limit.MaxResults > DefaultMaxResults {
+		conf.Server.Search.Limit.MaxResults = DefaultMaxResults
 	}
 
-	if conf.Server.SearchLimit.MaxResultsPerFile <= 0 || conf.Server.SearchLimit.MaxResultsPerFile > DefaultMaxResultsPerFile {
-		conf.Server.SearchLimit.MaxResultsPerFile = DefaultMaxResultsPerFile
+	if conf.Server.Search.Limit.MaxResultsPerFile <= 0 ||
+		conf.Server.Search.Limit.MaxResultsPerFile > DefaultMaxResultsPerFile {
+		conf.Server.Search.Limit.MaxResultsPerFile = DefaultMaxResultsPerFile
+	}
+
+	if conf.Server.Search.MaxWildcardLength <= 0 ||
+		conf.Server.Search.MaxWildcardLength > 64 { // 64 is the maximum length of a wildcard
+		conf.Server.Search.MaxWildcardLength = DefaultMaxSearchWildcardLength
+	}
+
+	if conf.Server.Search.MaxKeywordDistance <= 0 ||
+		conf.Server.Search.MaxKeywordDistance > 128 { // 128 is the maximum distance of a keyword
+		conf.Server.Search.MaxKeywordDistance = DefaultMaxSearchKeywordDistance
 	}
 
 	if conf.Client.DefaultLimit.MaxResults <= 0 ||
-		conf.Client.DefaultLimit.MaxResults > conf.Server.SearchLimit.MaxResults {
+		conf.Client.DefaultLimit.MaxResults > conf.Server.Search.Limit.MaxResults {
 		conf.Client.DefaultLimit.MaxResults = DefaultClientMaxResults
 	}
 
 	if conf.Client.DefaultLimit.MaxResultsPerFile <= 0 ||
-		conf.Client.DefaultLimit.MaxResultsPerFile > conf.Server.SearchLimit.MaxResultsPerFile {
+		conf.Client.DefaultLimit.MaxResultsPerFile > conf.Server.Search.Limit.MaxResultsPerFile {
 		conf.Client.DefaultLimit.MaxResultsPerFile = DefaultClientMaxResultsPerFile
 	}
 

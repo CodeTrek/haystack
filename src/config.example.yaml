@@ -30,3 +30,9 @@ server:
     include:  ["*.cc", "*.c", "*.hpp", "*.cpp", "*.h", "*.md", "*.js", "*.ts", "*.txt", "*.mm", "*.java", "*.cs", "*.py",
               "*.kt", "*.go", "*.rb", "*.php", "*.html", "*.css", "*.yaml", "*.yml", "*.toml", "*.xml", "*.sql", "*.sh",
               "Makefile", "*.bat", "*.ps1", "*.sln", "*.json", "*.vcxproj", "*.vcproj", "*.vcxproj.filters"]
+  search:
+    max_wildcard_length: 24 # the maximum length of "*" will be matched in query, default is 24
+    max_keyword_distance: 32 # the maximum char distance between keywords in query, default is 32
+    limit:
+      max_results: 5000 # the maximum number of results to return, default is 5000
+      max_results_per_file: 500 # the maximum number of results per file to return, default is 500

@@ -121,7 +121,7 @@ func displaySearchResults(resp *types.SearchContentResults) {
 			// }
 
 			// Show the matching line
-			fmt.Printf("→ %4d: %s\n", match.Line.LineNumber, match.Line.Content)
+			fmt.Printf("→ %4d@(%d,%d): %s\n", match.Line.LineNumber, match.Line.Match[0], match.Line.Match[1], match.Line.Content)
 
 			// // Show context after the match
 			// for _, afterLine := range match.After {

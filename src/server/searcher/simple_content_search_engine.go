@@ -2,10 +2,12 @@ package searcher
 
 import (
 	"errors"
+	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -17,13 +19,13 @@ type SimpleContentSearchEngine struct {
 }
 
 type SimpleContentSearchEngineAndClause struct {
+	Regex    *regexp.Regexp
 	AndTerms []*SimpleContentSearchEngineTerm
 }
 
 type SimpleContentSearchEngineTerm struct {
 	Pattern string
 	Prefix  string
-	Regex   *regexp.Regexp
 }
 
 func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, error) {
@@ -116,28 +118,7 @@ func (q *SimpleContentSearchEngineAndClause) IsLineMatch(line string) [][]int {
 	if len(q.AndTerms) == 0 {
 		return [][]int{}
 	}
-
-	// We should match keywords in orders
-	matches := [][]int{}
-	for _, term := range q.AndTerms {
-		match := term.IsLineMatch(line)
-		if len(match) == 0 {
-			return [][]int{}
-		}
-		matches = append(matches, match)
-		line = line[match[1]:]
-	}
-
-	return matches
-}
-
-func (q *SimpleContentSearchEngineTerm) IsLineMatch(line string) []int {
-	match := q.Regex.FindAllStringIndex(line, 1)
-	if len(match) > 0 {
-		return []int{match[0][0], match[0][1]}
-	}
-
-	return []int{}
+	return q.Regex.FindAllStringIndex(line, -1)
 }
 
 func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) error {
@@ -145,6 +126,9 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 	if query == "" {
 		return errors.New("query is empty")
 	}
+
+	maxWildcardLength := strconv.Itoa(conf.Get().Server.Search.MaxWildcardLength)
+	maxKeywordDistance := strconv.Itoa(conf.Get().Server.Search.MaxKeywordDistance)
 
 	orClauses := []*SimpleContentSearchEngineAndClause{}
 	for _, orClause := range strings.Split(query, "|") {
@@ -154,6 +138,7 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 		}
 
 		andPatterns := []*SimpleContentSearchEngineTerm{}
+		regPatterns := []string{}
 		for _, andPattern := range strings.Split(orClause, " ") {
 			andPattern = strings.TrimSpace(andPattern)
 			if andPattern == "" || andPattern == "AND" {
@@ -164,26 +149,18 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 			if len(prefixes) > 0 {
 				regPattern := andPattern
 				regPattern = strings.ReplaceAll(regPattern, ".", "\\.")
-				regPattern = strings.ReplaceAll(regPattern, "*", ".{0,32}")
+				regPattern = strings.ReplaceAll(regPattern, "*", ".{0,"+maxWildcardLength+"}")
 				regPattern = strings.ReplaceAll(regPattern, "?", ".?")
 				regPattern = strings.ReplaceAll(regPattern, "[", "\\[")
 				regPattern = strings.ReplaceAll(regPattern, "]", "\\]")
 				regPattern = strings.ReplaceAll(regPattern, "^", "\\^")
 				regPattern = strings.ReplaceAll(regPattern, "$", "\\$")
 				regPattern = strings.ReplaceAll(regPattern, ":", "\\:")
-				casePattern := ""
-				if !caseSensitive {
-					casePattern = "(?i)"
-				}
-				reg, err := regexp.Compile(casePattern + "[^a-zA-Z0-9]" + regPattern)
-				if err != nil {
-					return err
-				}
+				regPatterns = append(regPatterns, regPattern)
 
 				andPatterns = append(andPatterns, &SimpleContentSearchEngineTerm{
 					Pattern: andPattern,
 					Prefix:  strings.ToLower(prefixes[0]),
-					Regex:   reg,
 				})
 			}
 		}
@@ -192,7 +169,17 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 			continue
 		}
 
+		casePattern := ""
+		if !caseSensitive {
+			casePattern = "(?i)"
+		}
+		reg, err := regexp.Compile(casePattern + "[^a-zA-Z0-9]" + strings.Join(regPatterns, ".{0,"+maxKeywordDistance+"}[^a-zA-Z0-9]"))
+		if err != nil {
+			return err
+		}
+
 		orClauses = append(orClauses, &SimpleContentSearchEngineAndClause{
+			Regex:    reg,
 			AndTerms: andPatterns,
 		})
 	}
