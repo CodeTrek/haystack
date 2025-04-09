@@ -118,7 +118,17 @@ func (q *SimpleContentSearchEngineAndClause) IsLineMatch(line string) [][]int {
 	if len(q.AndTerms) == 0 {
 		return [][]int{}
 	}
-	return q.Regex.FindAllStringIndex(line, -1)
+	results := [][]int{}
+
+	matches := q.Regex.FindAllSubmatchIndex([]byte(line), -1)
+	for _, match := range matches {
+		if len(match) == 0 {
+			continue
+		}
+		results = append(results, match[4:6]) // match[4] is the start of the match, match[5] is the end of the match
+	}
+
+	return results
 }
 
 func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) error {
@@ -173,7 +183,7 @@ func (q *SimpleContentSearchEngine) Compile(query string, caseSensitive bool) er
 		if !caseSensitive {
 			casePattern = "(?i)"
 		}
-		reg, err := regexp.Compile(casePattern + "[^a-zA-Z0-9]" + strings.Join(regPatterns, ".{0,"+maxKeywordDistance+"}[^a-zA-Z0-9]"))
+		reg, err := regexp.Compile(casePattern + "(^|[^a-zA-Z0-9])(" + strings.Join(regPatterns, ".{0,"+maxKeywordDistance+"}[^a-zA-Z0-9]") + ")")
 		if err != nil {
 			return err
 		}

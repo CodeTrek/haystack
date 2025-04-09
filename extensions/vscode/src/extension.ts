@@ -16,7 +16,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             SearchViewProvider.viewType,
-            searchViewProvider
+            searchViewProvider,
+            {
+                webviewOptions: {
+                    retainContextWhenHidden: true
+                }
+            }
         )
     );
 

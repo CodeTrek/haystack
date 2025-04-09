@@ -56,10 +56,11 @@ export class HaystackProvider {
 
         try {
             const response = await axios.post<SearchContentResponse>(`${HAYSTACK_URL}/search/content`, searchRequest);
-            if (response.data.code === 0 && response.data.data?.results) {
-                return response.data.data.results;
+            if (response.data.code === 0) {
+                return response.data.data?.results || [];
             } else {
-                throw new Error(response.data.message || 'Search failed');
+                console.log(`Search returned no results: ${response.data.message || 'Unknown reason'}`);
+                return [];
             }
         } catch (error) {
             throw new Error(`Failed to connect to Haystack server: ${error}`);

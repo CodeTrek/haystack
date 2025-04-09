@@ -38,7 +38,8 @@
         {
           "id": "haystackSearch",
           "name": "Search",
-          "type": "webview"
+          "type": "webview",
+          "retainContextWhenHidden": true
         }
       ]
     }
