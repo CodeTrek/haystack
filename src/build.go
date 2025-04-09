@@ -39,12 +39,20 @@ func main() {
 	for _, t := range targets {
 		fmt.Printf("🔨 Building for %s/%s...\n", t.GOOS, t.GOARCH)
 
-		binName := fmt.Sprintf("%s-%s-%s-v%s%s", appName, t.GOOS, t.GOARCH, version, t.Ext)
+		binName := fmt.Sprintf("%s%s", appName, t.Ext)
 		binPath := filepath.Join(outputDir, binName)
 
-		ldflags := fmt.Sprintf("-X 'main.version=%s'", version)
+		ldflags := fmt.Sprintf("-s -w -X 'main.version=%s'", version)
+		args := []string{
+			"build",
+			"-trimpath",
+			"-ldflags", ldflags,
+			"-gcflags=all=-l",
+			"-o", binPath,
+			"main.go",
+		}
 
-		cmd := exec.Command("go", "build", "-ldflags", ldflags, "-o", binPath, "main.go")
+		cmd := exec.Command("go", args...)
 		cmd.Env = append(os.Environ(),
 			"GOOS="+t.GOOS,
 			"GOARCH="+t.GOARCH,
@@ -58,7 +66,7 @@ func main() {
 			continue
 		}
 
-		zipName := strings.TrimSuffix(binName, t.Ext) + ".zip"
+		zipName := fmt.Sprintf("%s-%s-%s-v%s.zip", appName, t.GOOS, t.GOARCH, version)
 		zipPath := filepath.Join(outputDir, zipName)
 
 		if err := zipFile(zipPath, binPath); err != nil {
