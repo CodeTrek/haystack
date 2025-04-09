@@ -12,7 +12,7 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         await haystackProvider.createWorkspace();
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to create workspace: ${error}`);
+//        vscode.window.showErrorMessage(`Failed to create workspace: ${error}`);
     }
 
     context.subscriptions.push(
@@ -34,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 try {
                     await haystackProvider?.createWorkspace();
                 } catch (error) {
-                    vscode.window.showErrorMessage(`Failed to create workspace: ${error}`);
+//                    vscode.window.showErrorMessage(`Failed to create workspace: ${error}`);
                 }
             }
         })

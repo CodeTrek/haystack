@@ -38,7 +38,7 @@
       "activitybar": [
         {
           "id": "haystack-search",
-          "title": "Haystack Search",
+          "title": "Haystack",
           "icon": "media/search.svg"
         }
       ]

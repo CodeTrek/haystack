@@ -4,6 +4,7 @@ export interface TextSearchOptions {
     includePattern?: { [key: string]: boolean };
     excludePattern?: { [key: string]: boolean };
     maxResults?: number;
+    maxResultsPerFile?: number;
     includeDeclaration?: boolean;
 }
 
@@ -60,4 +61,20 @@ export interface SearchContentResponse {
         results?: SearchContentResult[];
         truncate?: boolean;
     };
+}
+
+export interface SearchMessage {
+    type: 'search' | 'openFile';
+    query?: string;
+    options?: {
+        caseSensitive: boolean;
+        include: string;
+        exclude: string;
+        maxResults?: number;
+        maxResultsPerFile?: number;
+    };
+    file?: string;
+    line?: number;
+    start?: number;
+    end?: number;
 }

@@ -146,8 +146,6 @@ func handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	ws.Mutex.Unlock()
 
-	log.Printf("Get workspace `%s`: %v", request.Workspace, ws)
-
 	json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
 		Code:    0,
 		Message: "Ok",

@@ -161,14 +161,15 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 							Match:      match,
 						},
 					})
+
 					totalHits++
+					fileHits++
+					if fileHits >= limit.MaxResultsPerFile {
+						fileMatch.Truncate = true
+						break
+					}
 				}
-				fileHits++
-				if fileHits >= limit.MaxResultsPerFile {
-					fileMatch.Truncate = true
-					break
-				}
-				if totalHits >= limit.MaxResults {
+				if fileHits >= limit.MaxResultsPerFile || totalHits >= limit.MaxResults {
 					break
 				}
 			}

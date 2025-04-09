@@ -21,6 +21,7 @@ function getHaystackHost(): string {
 const HAYSTACK_PORT = '13134';
 const HAYSTACK_URL = `http://${getHaystackHost()}:${HAYSTACK_PORT}/api/v1`;
 const WORKSPACE_CREATE_URL = `${HAYSTACK_URL}/workspace/create`;
+const WORKSPACE_GET_URL = `${HAYSTACK_URL}/workspace/get`;
 const DOCUMENT_UPDATE_URL = `${HAYSTACK_URL}/document/update`;
 const DOCUMENT_DELETE_URL = `${HAYSTACK_URL}/document/delete`;
 
@@ -28,12 +29,14 @@ export class HaystackProvider {
     private workspaceRoot: string;
     private updateTimeouts: Map<string, NodeJS.Timeout>;
     private periodicTaskInterval: NodeJS.Timeout | null;
+    private statusUpdateInterval: NodeJS.Timeout | null;
 
     constructor() {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         this.workspaceRoot = workspaceFolders ? workspaceFolders[0].uri.fsPath : '';
         this.updateTimeouts = new Map();
         this.periodicTaskInterval = null;
+        this.statusUpdateInterval = null;
 
         // Start periodic workspace creation task
         this.startPeriodicTask();
@@ -170,8 +173,9 @@ export class HaystackProvider {
         caseSensitive?: boolean;
         include?: string;
         exclude?: string;
-        maxResults?: number
-    }): Promise<SearchContentResult[]> {
+        maxResults?: number;
+        maxResultsPerFile?: number;
+    }): Promise<{ results: SearchContentResult[]; truncated: boolean }> {
         const searchRequest: SearchContentRequest = {
             workspace: this.workspaceRoot,
             query: query,
@@ -181,20 +185,97 @@ export class HaystackProvider {
                 exclude: options.exclude
             },
             limit: {
-                max_results: options.maxResults
+                max_results: options.maxResults,
+                max_results_per_file: options.maxResultsPerFile
             }
         };
 
         try {
             const response = await axios.post<SearchContentResponse>(`${HAYSTACK_URL}/search/content`, searchRequest);
             if (response.data.code === 0) {
-                return response.data.data?.results || [];
+                return {
+                    results: response.data.data?.results || [],
+                    truncated: response.data.data?.truncate || false
+                };
             } else {
                 console.log(`Search returned no results: ${response.data.message || 'Unknown reason'}`);
-                return [];
+                return { results: [], truncated: false };
             }
         } catch (error) {
             throw new Error(`Failed to connect to Haystack server: ${error}`);
+        }
+    }
+
+    async getWorkspaceStatus(): Promise<{ indexing: boolean; totalFiles: number; indexedFiles: number; error?: string }> {
+        if (!this.workspaceRoot) {
+            return {
+                indexing: false,
+                totalFiles: 0,
+                indexedFiles: 0,
+                error: 'No workspace folder is opened'
+            };
+        }
+
+        try {
+            const response = await axios.post(WORKSPACE_GET_URL, {
+                workspace: this.workspaceRoot
+            });
+
+            if (response.data.code !== 0) {
+                return {
+                    indexing: false,
+                    totalFiles: 0,
+                    indexedFiles: 0,
+                    error: response.data.message || 'Failed to get workspace status'
+                };
+            }
+
+            // Data might be undefined due to omitempty
+            if (!response.data.data) {
+                return {
+                    indexing: false,
+                    totalFiles: 0,
+                    indexedFiles: 0,
+                    error: 'Workspace not found'
+                };
+            }
+
+            return {
+                indexing: response.data.data.indexing,
+                totalFiles: response.data.data.total_files,
+                indexedFiles: response.data.data.total_files
+            };
+        } catch (error) {
+            return {
+                indexing: false,
+                totalFiles: 0,
+                indexedFiles: 0,
+                error: `Failed to get workspace status: ${error}`
+            };
+        }
+    }
+
+    startStatusUpdates(callback: (status: { indexing: boolean; totalFiles: number; indexedFiles: number; error?: string }) => void) {
+        // Clear existing interval if any
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
+        }
+
+        // Set up new interval (3 seconds)
+        this.statusUpdateInterval = setInterval(async () => {
+            try {
+                const status = await this.getWorkspaceStatus();
+                callback(status);
+            } catch (error) {
+                console.error(`Failed to update workspace status: ${error}`);
+            }
+        }, 3000);
+    }
+
+    stopStatusUpdates() {
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
+            this.statusUpdateInterval = null;
         }
     }
 
@@ -209,6 +290,12 @@ export class HaystackProvider {
         if (this.periodicTaskInterval) {
             clearInterval(this.periodicTaskInterval);
             this.periodicTaskInterval = null;
+        }
+
+        // Clear status update interval
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
+            this.statusUpdateInterval = null;
         }
     }
 }
