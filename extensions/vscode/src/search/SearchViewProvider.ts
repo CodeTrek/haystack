@@ -34,15 +34,19 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         // Store the webview reference
         this._view = webviewView;
 
+        // Configure webview options
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [
+                vscode.Uri.joinPath(this._extensionUri, 'resources'),
+                vscode.Uri.joinPath(this._extensionUri, 'dist'),
+                vscode.Uri.joinPath(this._extensionUri, 'dist', 'resources')
+            ]
         };
 
         // Set HTML content only if it hasn't been set before
-        // This is crucial - we don't want to reset the HTML when the view becomes visible again
         if (!webviewView.webview.html) {
-            webviewView.webview.html = getSearchTemplate(webviewView.webview);
+            webviewView.webview.html = getSearchTemplate(webviewView.webview, this._extensionUri);
         }
 
         // Handle messages from the webview

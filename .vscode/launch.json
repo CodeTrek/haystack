@@ -36,9 +36,8 @@
         "--disable-workspace-trust"
       ],
       "outFiles": [
-        "${workspaceFolder}/extensions/vscode/out/**/*.js"
+        "${workspaceFolder}/extensions/vscode/dist/**/*.js"
       ],
-      "preLaunchTask": "VS Code Extension Watch",
       "env": {
         "IS_DEV": "true",
         "DEV_WORKSPACE_FOLDER": "${workspaceFolder}/extensions/vscode"

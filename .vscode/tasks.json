@@ -33,9 +33,20 @@
                 "isDefault": true
             },
             "isBackground": true,
-            "problemMatcher": [
-                "$tsc-watch"
-            ],
+            "problemMatcher": {
+                "owner": "typescript",
+                "pattern": {
+                    "regexp": "^\\[webpack\\]\\s+(\\d{1,2}:\\d{2}:\\d{2}\\s+[AP]M)\\s+(\\w+):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[webpack\\]\\s+Compiling...",
+                    "endsPattern": "^\\[webpack\\]\\s+Compiled successfully"
+                }
+            },
             "presentation": {
                 "reveal": "never",
                 "panel": "dedicated"

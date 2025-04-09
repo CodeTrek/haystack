@@ -3,6 +3,7 @@
 *.log
 *.exe
 *.local.yaml
+*.vsix
 
 # Ignore build directory
 build/
