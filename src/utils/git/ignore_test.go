@@ -38,7 +38,7 @@ func TestGitIgnoreRule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := parseRule(tt.pattern)
+			rule := parseRule(tt.pattern, true)
 			result := rule.isIgnored(tt.path, tt.isDir)
 			if result != tt.expected {
 				t.Errorf("rule.isIgnored(%q, %v) = %v; want %v", tt.path, tt.isDir, result, tt.expected)
@@ -82,7 +82,7 @@ dir/
 	}
 
 	// 创建规则文件
-	ruleFile, err := NewGitIgnoreRules(gitignorePath)
+	ruleFile, err := NewGitIgnoreRules(gitignorePath, true)
 	if err != nil {
 		t.Fatalf("Failed to create rule file: %v", err)
 	}
@@ -187,7 +187,7 @@ ignored_dir/
 	}
 
 	// 创建 GitIgnore 系统
-	ignorer := NewGitIgnore(tempDir)
+	ignorer := NewGitIgnore(tempDir, true)
 
 	tests := []struct {
 		name     string
@@ -256,7 +256,7 @@ func TestGitIgnoreEdgeCases(t *testing.T) {
 	}
 
 	// 创建 GitIgnore 系统
-	ignorer := NewGitIgnore(tempDir)
+	ignorer := NewGitIgnore(tempDir, true)
 
 	tests := []struct {
 		name     string

@@ -10,10 +10,11 @@ import (
 
 // GitIgnore represents the entire gitignore system
 type GitIgnore struct {
-	rootPath  string
-	ruleFiles map[string]*GitIgnoreRules
-	cache     map[string]bool // Cache for directory paths only
-	mutex     sync.RWMutex    // Mutex to protect shared data
+	rootPath   string
+	ruleFiles  map[string]*GitIgnoreRules
+	cache      map[string]bool // Cache for directory paths only
+	mutex      sync.RWMutex    // Mutex to protect shared data
+	ignoreCase bool
 }
 
 // GitIgnoreRules represents a single .gitignore file
@@ -29,10 +30,11 @@ type gitIgnoreRule struct {
 	Negated     bool   // Whether it's a negation rule (!)
 	AnchoredDir bool   // Whether it's a directory rule (/)
 	RootOnly    bool   // Whether it only matches root directory (starts with /)
+	IgnoreCase  bool   // Whether matching should ignore case
 }
 
 // NewGitIgnoreRules creates a GitIgnoreRuleFile from a file
-func NewGitIgnoreRules(filePath string) (*GitIgnoreRules, error) {
+func NewGitIgnoreRules(filePath string, ignoreCase bool) (*GitIgnoreRules, error) {
 	baseDir := filepath.Dir(filePath)
 
 	file, err := os.Open(filePath)
@@ -42,7 +44,7 @@ func NewGitIgnoreRules(filePath string) (*GitIgnoreRules, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	rf, err := parseGitIgnoreFile(scanner, baseDir)
+	rf, err := parseGitIgnoreFile(scanner, baseDir, ignoreCase)
 	if err != nil {
 		return nil, err
 	}
@@ -50,23 +52,24 @@ func NewGitIgnoreRules(filePath string) (*GitIgnoreRules, error) {
 	return rf, nil
 }
 
-func NewGitIgnoreRulesFromString(rules string, baseDir string) (*GitIgnoreRules, error) {
+func NewGitIgnoreRulesFromString(rules string, baseDir string, ignoreCase bool) (*GitIgnoreRules, error) {
 	scanner := bufio.NewScanner(strings.NewReader(rules))
-	return parseGitIgnoreFile(scanner, baseDir)
+	return parseGitIgnoreFile(scanner, baseDir, ignoreCase)
 }
 
 // NewGitIgnore creates a new GitIgnore system
-func NewGitIgnore(rootPath string) *GitIgnore {
+func NewGitIgnore(rootPath string, ignoreCase bool) *GitIgnore {
 	rootPath = filepath.Clean(rootPath)
 	if !filepath.IsAbs(rootPath) {
 		return nil
 	}
 
 	ignorer := &GitIgnore{
-		rootPath:  rootPath,
-		ruleFiles: make(map[string]*GitIgnoreRules),
-		cache:     make(map[string]bool),
-		mutex:     sync.RWMutex{},
+		rootPath:   rootPath,
+		ruleFiles:  make(map[string]*GitIgnoreRules),
+		cache:      make(map[string]bool),
+		mutex:      sync.RWMutex{},
+		ignoreCase: ignoreCase,
 	}
 
 	// Load root .gitignore if exists
@@ -123,9 +126,11 @@ func (g *GitIgnore) IsIgnored(relPath string, isDir bool) bool {
 	}
 
 	baseName := filepath.Base(relPath)
-	if isDir && baseName == ".git" {
+	// Case insensitive checking for .git and .gitignore
+	baseNameLower := strings.ToLower(baseName)
+	if isDir && baseNameLower == ".git" {
 		return true
-	} else if !isDir && baseName == ".gitignore" {
+	} else if !isDir && baseNameLower == ".gitignore" {
 		return true
 	}
 
@@ -226,6 +231,11 @@ func (r *gitIgnoreRule) isIgnored(relPath string, isDir bool) bool {
 	// Clean the path for matching
 	relPath = strings.TrimPrefix(relPath, "./")
 
+	// Apply case insensitivity if needed
+	if r.IgnoreCase {
+		relPath = strings.ToLower(relPath)
+	}
+
 	// Handle root directory rules
 	if r.RootOnly {
 		// For root directory rules, the path must be directly under the root
@@ -249,6 +259,12 @@ func (r *gitIgnoreRule) matchPattern(path string) bool {
 	// Normalize pattern
 	pattern := strings.TrimPrefix(r.Pattern, "./")
 
+	// Apply case insensitivity if needed
+	if r.IgnoreCase {
+		pattern = strings.ToLower(pattern)
+		path = strings.ToLower(path)
+	}
+
 	// Special case for directory match
 	if r.AnchoredDir && pattern == path {
 		return true
@@ -269,6 +285,12 @@ func (r *gitIgnoreRule) matchPattern(path string) bool {
 
 // matchWithDoubleAsterisk handles patterns containing **
 func (r *gitIgnoreRule) matchWithDoubleAsterisk(pattern, path string) bool {
+	// Apply case insensitivity if needed
+	if r.IgnoreCase {
+		pattern = strings.ToLower(pattern)
+		path = strings.ToLower(path)
+	}
+
 	// Handle special case for "**" pattern (matches everything)
 	if pattern == "**" {
 		return true
@@ -320,6 +342,17 @@ func (r *gitIgnoreRule) matchSegments(pattern, path []string, patternIdx, pathId
 	if err != nil {
 		return false
 	}
+
+	// If case insensitive is enabled, try again with lowercase comparison
+	if !match && r.IgnoreCase {
+		lowerPattern := strings.ToLower(pattern[patternIdx])
+		lowerPath := strings.ToLower(path[pathIdx])
+		match, err = filepath.Match(lowerPattern, lowerPath)
+		if err != nil {
+			return false
+		}
+	}
+
 	if match {
 		return r.matchSegments(pattern, path, patternIdx+1, pathIdx+1)
 	}
@@ -328,7 +361,7 @@ func (r *gitIgnoreRule) matchSegments(pattern, path []string, patternIdx, pathId
 }
 
 // parseGitIgnoreFile parses .gitignore rules
-func parseGitIgnoreFile(scanner *bufio.Scanner, baseDir string) (*GitIgnoreRules, error) {
+func parseGitIgnoreFile(scanner *bufio.Scanner, baseDir string, ignoreCase bool) (*GitIgnoreRules, error) {
 	var rules []gitIgnoreRule
 
 	for scanner.Scan() {
@@ -339,7 +372,7 @@ func parseGitIgnoreFile(scanner *bufio.Scanner, baseDir string) (*GitIgnoreRules
 			continue
 		}
 
-		rules = append(rules, parseRule(pattern))
+		rules = append(rules, parseRule(pattern, ignoreCase))
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -353,7 +386,7 @@ func parseGitIgnoreFile(scanner *bufio.Scanner, baseDir string) (*GitIgnoreRules
 }
 
 // parseRule parses a single gitignore rule
-func parseRule(pattern string) gitIgnoreRule {
+func parseRule(pattern string, ignoreCase bool) gitIgnoreRule {
 	// Handle negation rule
 	negated := false
 	if strings.HasPrefix(pattern, "!") {
@@ -383,6 +416,7 @@ func parseRule(pattern string) gitIgnoreRule {
 		Negated:     negated,
 		AnchoredDir: anchoredDir,
 		RootOnly:    rootOnly,
+		IgnoreCase:  ignoreCase,
 	}
 }
 
@@ -434,7 +468,7 @@ func (g *GitIgnore) loadGitIgnoreForDir(dir string) *GitIgnoreRules {
 
 	gitIgnorePath := filepath.Join(dir, ".gitignore")
 	if _, err := os.Stat(gitIgnorePath); err == nil {
-		rf, _ = NewGitIgnoreRules(gitIgnorePath)
+		rf, _ = NewGitIgnoreRules(gitIgnorePath, g.ignoreCase)
 	}
 
 	if rf == nil {

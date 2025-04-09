@@ -94,7 +94,7 @@ ignored_dir/
 	fileInfos := []FileInfo{}
 	err = ListFiles(tempDir, ListFileOptions{
 		Filter: &GitIgnoreFilter{
-			ignore: gitutils.NewGitIgnore(tempDir),
+			ignore: gitutils.NewGitIgnore(tempDir, true),
 		},
 	}, func(fileInfo FileInfo) bool {
 		fileInfos = append(fileInfos, fileInfo)

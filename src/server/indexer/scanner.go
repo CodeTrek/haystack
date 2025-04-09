@@ -86,7 +86,7 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	var exclude fsutils.ListFileFilter
 	if filters.Exclude.UseGitIgnore {
 		exclude = &GitIgnoreFilter{
-			ignore: gitutils.NewGitIgnore(baseDir),
+			ignore: gitutils.NewGitIgnore(baseDir, true),
 		}
 	} else {
 		exclude = utils.NewSimpleFilterExclude(filters.Exclude.Customized, baseDir)

@@ -31,7 +31,7 @@ func NewSimpleFilterExclude(patterns []string, baseDir string) *SimpleFilter {
 		return nil
 	}
 
-	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir)
+	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir, true)
 	return &SimpleFilter{
 		rootPath: baseDir,
 		negate:   true,
@@ -44,7 +44,7 @@ func NewSimpleFilter(patterns []string, baseDir string) *SimpleFilter {
 		return nil
 	}
 
-	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir)
+	ignore, _ := gitutils.NewGitIgnoreRulesFromString(strings.Join(patterns, "\n"), baseDir, true)
 	return &SimpleFilter{
 		rootPath: baseDir,
 		negate:   false,
