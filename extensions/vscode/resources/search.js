@@ -187,6 +187,13 @@
         var message = event.data;
         if (message.type === 'searchResults') {
             displayResults(message);
+        } else if (message.type === 'setSearchText') {
+            // Handle setting search text from editor selection
+            if (searchInput && message.text) {
+                searchInput.value = message.text;
+                // Perform search immediately with the new text
+                performSearch();
+            }
         }
     });
 })();

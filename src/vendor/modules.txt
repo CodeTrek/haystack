@@ -88,9 +88,6 @@ github.com/cockroachdb/redact/internal/rfmt/fmtsort
 # github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06
 ## explicit; go 1.19
 github.com/cockroachdb/tokenbucket
-# github.com/davecgh/go-spew v1.1.1
-## explicit
-github.com/davecgh/go-spew/spew
 # github.com/getsentry/sentry-go v0.27.0
 ## explicit; go 1.18
 github.com/getsentry/sentry-go
@@ -140,9 +137,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v1.12.0
 ## explicit; go 1.13
 github.com/prometheus/client_golang/prometheus
@@ -163,9 +157,6 @@ github.com/prometheus/procfs/internal/util
 # github.com/rogpeppe/go-internal v1.9.0
 ## explicit; go 1.17
 github.com/rogpeppe/go-internal/fmtsort
-# github.com/stretchr/testify v1.9.0
-## explicit; go 1.17
-github.com/stretchr/testify/assert
 # golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 ## explicit; go 1.20
 golang.org/x/exp/constraints

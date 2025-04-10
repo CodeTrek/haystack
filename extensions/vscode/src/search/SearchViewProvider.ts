@@ -67,6 +67,35 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    /**
+     * Initiates a search with the provided text in the search view
+     * @param text The text to search for
+     */
+    public searchText(text: string): void {
+        if (!this._view) {
+            console.error('Search view is not available');
+            return;
+        }
+
+        // Send a message to the webview to update the search input
+        this._view.webview.postMessage({
+            type: 'setSearchText',
+            text: text
+        });
+
+        // Directly trigger search using the search handlers with default options
+        const defaultOptions = {
+            caseSensitive: false,
+            include: '',
+            exclude: ''
+        };
+
+        // Use the search handlers to perform the search immediately
+        if (this._view.visible) {
+            this._searchHandlers.handleSearch(this._view.webview, text, defaultOptions);
+        }
+    }
+
     private startStatusUpdates() {
         // Clear existing interval if any
         if (this._statusUpdateInterval) {

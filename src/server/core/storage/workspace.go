@@ -45,6 +45,10 @@ func GetWorkspace(id string) (string, error) {
 	return string(v), nil
 }
 
-func SaveWorkspace(id string, workspace string) error {
-	return db.Put(EncodeWorkspaceKey(id), []byte(workspace))
+func SaveWorkspace(id string, workspaceJson string) error {
+	return db.Put(EncodeWorkspaceKey(id), []byte(workspaceJson))
+}
+
+func DeleteWorkspace(id string) error {
+	return nil
 }

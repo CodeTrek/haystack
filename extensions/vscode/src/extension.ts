@@ -8,6 +8,7 @@ const getStateKey = (key: string) => `${isDev() ? 'dev.' : ''}${key}`;
 
 // Global state
 let haystackProvider: HaystackProvider | undefined;
+let searchViewProvider: SearchViewProvider | undefined;
 
 /**
  * This function is called when your extension is activated
@@ -19,7 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('Haystack extension activated');
 
     haystackProvider = new HaystackProvider();
-    const searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider);
+    searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider);
 
     // Register search view
     context.subscriptions.push(
@@ -32,6 +33,39 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             }
         )
+    );
+
+    // Register command to search selected text
+    context.subscriptions.push(
+        vscode.commands.registerCommand('haystack.searchSelectedText', async () => {
+            // Get active editor
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showInformationMessage('No active editor found');
+                return;
+            }
+
+            // Get selected text
+            const selection = editor.selection;
+            if (selection.isEmpty) {
+                vscode.window.showInformationMessage('No text selected');
+                return;
+            }
+
+            const selectedText = editor.document.getText(selection);
+            if (!selectedText) {
+                vscode.window.showInformationMessage('Selected text is empty');
+                return;
+            }
+
+            // Show search view if it's not visible
+            await vscode.commands.executeCommand('haystackSearch.focus');
+
+            // Perform search with selected text
+            if (searchViewProvider) {
+                searchViewProvider.searchText(selectedText);
+            }
+        })
     );
 
     // Delay workspace creation
@@ -63,6 +97,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 haystackProvider.dispose();
                 haystackProvider = undefined;
             }
+            if (searchViewProvider) {
+                searchViewProvider.dispose();
+                searchViewProvider = undefined;
+            }
         }
     });
 }
@@ -71,5 +109,9 @@ export function deactivate() {
     if (haystackProvider) {
         haystackProvider.dispose();
         haystackProvider = undefined;
+    }
+    if (searchViewProvider) {
+        searchViewProvider.dispose();
+        searchViewProvider = undefined;
     }
 }
