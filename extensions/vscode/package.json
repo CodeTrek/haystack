@@ -11,7 +11,7 @@
     "email": "sychenjianjun@gmail.com"
   },
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.95.0"
   },
   "capabilities": {
     "virtualWorkspaces": true,
@@ -68,31 +68,23 @@
     "axios": "^1.6.7"
   },
   "devDependencies": {
-    "@types/mocha": "^9.0.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.14.0",
-    "@types/vscode": "^1.74.0",
-    "@typescript-eslint/eslint-plugin": "^5.45.0",
-    "@typescript-eslint/parser": "^5.45.0",
-    "copy-webpack-plugin": "^11.0.0",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "@vscode/vsce": "^3.3.2",
+    "copy-webpack-plugin": "^13.0.0",
     "cross-env": "^7.0.3",
-    "css-minimizer-webpack-plugin": "^6.0.0",
-    "eslint": "^8.28.0",
-    "rimraf": "^3.0.2",
+    "css-minimizer-webpack-plugin": "^7.0.2",
+    "eslint": "^9.24.0",
+    "rimraf": "^6.0.1",
     "terser-webpack-plugin": "^5.3.14",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "vsce": "^2.15.0",
-    "vscode-test": "^1.6.0",
+    "vscode-test": "^1.6.1",
     "webpack": "^5.99.5",
     "webpack-bundle-analyzer": "^4.10.2",
-    "webpack-cli": "^5.1.4"
-  },
-  "files": [
-    "dist",
-    "resources/search.css",
-    "resources/search.js",
-    "resources/search.svg",
-    "LICENSE",
-    "README.md"
-  ]
+    "webpack-cli": "^6.0.1"
+  }
 }

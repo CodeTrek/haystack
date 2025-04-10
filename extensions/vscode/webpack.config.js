@@ -14,9 +14,7 @@ module.exports = {
   target: 'node',
   mode: isProd ? 'production' : 'development',
   entry: {
-    extension: './src/extension.ts',
-    // No longer use search.js as an entry point, we use the original file directly
-    // 'resources/search': './resources/search.js'
+    extension: './src/extension.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -29,9 +27,7 @@ module.exports = {
     vscode: 'commonjs vscode'
   },
   resolve: {
-    extensions: ['.ts', '.js'],
-    // Prefer smaller modules
-    mainFields: ['module', 'main']
+    extensions: ['.ts', '.js']
   },
   module: {
     rules: [
@@ -43,89 +39,67 @@ module.exports = {
             loader: 'ts-loader',
             options: {
               compilerOptions: {
-                module: 'esnext', // Use esnext to enable better tree-shaking
-                removeComments: isProd // Remove comments in production
-              },
-              transpileOnly: true
+                module: 'esnext',
+                removeComments: isProd
+              }
             }
           }
         ]
-      },
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
       }
     ]
   },
   plugins: [
-    // Copy static resources - include JS files as well
     new CopyWebpackPlugin({
       patterns: [
         {
           from: 'resources',
           to: 'resources'
-          // No ignore patterns - include all files
         }
       ]
     }),
-    // Define environment variables for optimization
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(isProd ? 'production' : 'development'),
       'process.env.IS_PROD': JSON.stringify(isProd)
-    }),
-    // Ignore moment.js locale directory in production
-    isProd ? new webpack.IgnorePlugin({
-      resourceRegExp: /^\.\/locale$/,
-      contextRegExp: /moment$/
-    }) : null,
-    // Only add analyzer plugin in analyze mode
-    isAnalyze ? new BundleAnalyzerPlugin() : null
-  ].filter(Boolean),
+    })
+  ],
   optimization: {
-    // Enable tree-shaking
-    usedExports: true,
-    // Optimize module splitting in production
-    splitChunks: isProd ? {
-      chunks: 'all',
-      maxInitialRequests: Infinity,
-      minSize: 0,
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name(module) {
-            // Split node_modules modules into different bundles based on path
-            const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
-            return `vendor.${packageName.replace('@', '')}`;
-          }
-        }
-      }
-    } : false,
     minimize: isProd,
     minimizer: [
       new TerserPlugin({
-        parallel: true, // Parallel compression
+        parallel: true,
         terserOptions: {
           ecma: 2020,
-          parse: {},
           compress: {
-            drop_console: false, // Keep console.log statements
+            drop_console: false,
             drop_debugger: true,
-            pure_funcs: [], // Don't remove any functions
-            passes: 2, // Multiple compression passes
-            booleans_as_integers: true,
+            passes: 2,
             keep_infinity: true
-          },
-          mangle: {
-            properties: false
           },
           format: {
             comments: false,
             ascii_only: true
           }
         }
-      }),
-      new CssMinimizerPlugin()
-    ]
+      })
+    ],
+    splitChunks: isProd ? {
+      chunks: 'all',
+      minSize: 30000,
+      maxInitialRequests: 3,
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendor',
+          chunks: 'all',
+          priority: -10
+        },
+        default: {
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true
+        }
+      }
+    } : false
   },
   performance: {
     hints: false

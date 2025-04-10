@@ -21,13 +21,6 @@ export async function activate(context: vscode.ExtensionContext) {
     haystackProvider = new HaystackProvider();
     const searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider);
 
-    // Create workspace when extension is activated
-    try {
-        await haystackProvider.createWorkspace();
-    } catch (error) {
-        // Silent fail
-    }
-
     // Register search view
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
@@ -40,6 +33,15 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         )
     );
+
+    // Delay workspace creation
+    setTimeout(async () => {
+        try {
+            await haystackProvider?.createWorkspace();
+        } catch (error) {
+            // Silent fail
+        }
+    }, 1000);
 
     // Listen for workspace folder changes
     context.subscriptions.push(
