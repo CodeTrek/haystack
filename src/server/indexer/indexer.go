@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"fmt"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"log"
@@ -34,13 +33,20 @@ func RefreshIndexIfNeeded() {
 	}
 }
 
+func CreateWorkspace(workspacePath string) (*workspace.Workspace, error) {
+	return workspace.Create(workspacePath)
+}
+
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
 // A workspace needs to be synced if:
 // 1. It has never been successfully synced (LastFullSync is zero)
 func SyncIfNeeded(workspacePath string) error {
-	workspace, err := workspace.GetOrCreate(workspacePath)
+	workspace, err := workspace.GetByPath(workspacePath)
 	if err != nil {
-		return fmt.Errorf("failed to get or create workspace: %v", err)
+		workspace, err = CreateWorkspace(workspacePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	if workspace.LastFullSync.IsZero() {

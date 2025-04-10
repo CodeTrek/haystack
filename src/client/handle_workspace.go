@@ -14,6 +14,7 @@ func handleWorkspace(args []string) {
 		fmt.Println("  list                  List workspaces")
 		fmt.Println("  create                Create a new workspace")
 		fmt.Println("  delete                Delete a workspace")
+		fmt.Println("  sync-all              Sync all workspaces")
 		fmt.Println("  get <workspace path>  Get a workspace")
 		return
 	}
@@ -26,12 +27,24 @@ func handleWorkspace(args []string) {
 		handleWorkspaceCreate()
 	case "delete":
 		handleWorkspaceDelete()
+	case "sync-all":
+		handleWorkspaceSyncAll()
 	case "get":
 		handleWorkspaceGet(args[1])
 	default:
 		fmt.Printf("Unknown workspace command: %s\n", command)
 		fmt.Println("Available commands: list, create, delete, get")
 	}
+}
+
+func handleWorkspaceSyncAll() {
+	result, err := serverRequest("/workspace/sync-all", []byte{})
+	if err != nil {
+		fmt.Printf("Error syncing all workspaces: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Synced all workspaces: %v\n", result.Body.Message)
 }
 
 func handleWorkspaceList() {

@@ -88,10 +88,10 @@ func Load() error {
 	homePath := filepath.Join(running.UserHomeDir(), ".haystack")
 
 	search := []string{
-		"./config.local.yaml",
-		"./config.yaml",
+		filepath.Join(running.ExecutablePath(), "config.local.yaml"),
+		filepath.Join(running.ExecutablePath(), "config.yaml"),
 		filepath.Join(homePath, "config.yaml"),
-		"./config.example.yaml",
+		filepath.Join(running.ExecutablePath(), "config.example.yaml"),
 	}
 
 	var confFile *string

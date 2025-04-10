@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 var (
@@ -51,13 +52,23 @@ func ExecutableName() string {
 	return filepath.Base(Executable())
 }
 
+var once sync.Once
+var executable string
+
 func Executable() string {
-	executable, err := os.Executable()
-	if err != nil {
-		log.Fatalf("Failed to get executable path: %v", err)
-		return ""
-	}
+	once.Do(func() {
+		path, err := os.Executable()
+		if err != nil {
+			log.Fatalf("Failed to get executable path: %v", err)
+			return
+		}
+		executable = path
+	})
 	return executable
+}
+
+func ExecutablePath() string {
+	return filepath.Dir(Executable())
 }
 
 func StartNewServer() {

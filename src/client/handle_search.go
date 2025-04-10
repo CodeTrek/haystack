@@ -24,7 +24,7 @@ func handleSearch(args []string) {
 	caseSensitive := searchCmd.Bool("case-sensitive", false, "Enable case-sensitive search")
 
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
-		fmt.Println("Usage: " + running.ExecutableName() + " search <query> [options]")
+		fmt.Println("Usage: " + running.ExecutableName() + " search [options] <query>")
 		fmt.Println("Options:")
 		searchCmd.PrintDefaults()
 		return
