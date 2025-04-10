@@ -22,6 +22,7 @@ const HAYSTACK_PORT = '13134';
 const HAYSTACK_URL = `http://${getHaystackHost()}:${HAYSTACK_PORT}/api/v1`;
 const WORKSPACE_CREATE_URL = `${HAYSTACK_URL}/workspace/create`;
 const WORKSPACE_GET_URL = `${HAYSTACK_URL}/workspace/get`;
+const WORKSPACE_SYNC_URL = `${HAYSTACK_URL}/workspace/sync`;
 const DOCUMENT_UPDATE_URL = `${HAYSTACK_URL}/document/update`;
 const DOCUMENT_DELETE_URL = `${HAYSTACK_URL}/document/delete`;
 
@@ -252,6 +253,24 @@ export class HaystackProvider {
                 indexedFiles: 0,
                 error: `Failed to get workspace status: ${error}`
             };
+        }
+    }
+
+    async syncWorkspace(): Promise<void> {
+        if (!this.workspaceRoot) {
+            throw new Error('No workspace folder is opened');
+        }
+
+        try {
+            const response = await axios.post(WORKSPACE_SYNC_URL, {
+                workspace: this.workspaceRoot
+            });
+
+            if (response.data.code !== 0) {
+                throw new Error(response.data.message || 'Failed to sync workspace');
+            }
+        } catch (error) {
+            throw new Error(`Failed to sync workspace: ${error}`);
         }
     }
 

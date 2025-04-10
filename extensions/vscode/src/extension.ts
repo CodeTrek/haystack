@@ -68,6 +68,33 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Register command to sync the workspace index
+    context.subscriptions.push(
+        vscode.commands.registerCommand('haystack.syncWorkspace', async () => {
+            try {
+                vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "Refreshing Haystack index...",
+                    cancellable: false
+                }, async (progress) => {
+                    progress.report({ increment: 0 });
+
+                    try {
+                        // Call the sync API
+                        await haystackProvider?.syncWorkspace();
+
+                        progress.report({ increment: 100 });
+                        vscode.window.showInformationMessage('Haystack index refreshed successfully.');
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to refresh Haystack index: ${error}`);
+                    }
+                });
+            } catch (error) {
+                vscode.window.showErrorMessage(`Error during Haystack index refresh: ${error}`);
+            }
+        })
+    );
+
     // Delay workspace creation
     setTimeout(async () => {
         try {
