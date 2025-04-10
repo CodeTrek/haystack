@@ -174,6 +174,37 @@ func handleSyncAllWorkspaces(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(types.CommonResponse{
 		Code:    0,
-		Message: "Ok",
+		Message: "Sync all in progress...",
+	})
+}
+
+func handleSyncWorkspace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	var request types.SyncWorkspaceRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ws, err := workspace.GetByPath(request.Workspace)
+	if err != nil {
+		log.Printf("Sync workspace `%s`: %v", request.Workspace, err)
+		json.NewEncoder(w).Encode(types.CommonResponse{
+			Code:    1,
+			Message: fmt.Sprintf("Failed to get workspace: %v", err),
+		})
+		return
+	}
+
+	log.Printf("Requesting sync for workspace `%s`", ws.Path)
+
+	indexer.Sync(ws)
+
+	json.NewEncoder(w).Encode(types.CommonResponse{
+		Code:    0,
+		Message: "Sync in progress...",
 	})
 }

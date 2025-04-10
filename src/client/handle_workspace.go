@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"haystack/shared/running"
 	"haystack/shared/types"
+	"path/filepath"
 )
 
 func handleWorkspace(args []string) {
@@ -15,6 +16,7 @@ func handleWorkspace(args []string) {
 		fmt.Println("  create                Create a new workspace")
 		fmt.Println("  delete                Delete a workspace")
 		fmt.Println("  sync-all              Sync all workspaces")
+		fmt.Println("  sync <workspace path> Sync a workspace")
 		fmt.Println("  get <workspace path>  Get a workspace")
 		return
 	}
@@ -29,6 +31,8 @@ func handleWorkspace(args []string) {
 		handleWorkspaceDelete()
 	case "sync-all":
 		handleWorkspaceSyncAll()
+	case "sync":
+		handleWorkspaceSync(args[1])
 	case "get":
 		handleWorkspaceGet(args[1])
 	default:
@@ -44,7 +48,36 @@ func handleWorkspaceSyncAll() {
 		return
 	}
 
-	fmt.Printf("Synced all workspaces: %v\n", result.Body.Message)
+	fmt.Println("Message:", result.Body.Message)
+}
+
+func handleWorkspaceSync(workspacePath string) {
+	if workspacePath == "" {
+		fmt.Println("Usage: " + running.ExecutableName() + " workspace sync <workspace path>")
+		return
+	}
+	if !filepath.IsAbs(workspacePath) {
+		fmt.Println("Workspace path must be absolute")
+		return
+	}
+
+	request := types.SyncWorkspaceRequest{
+		Workspace: workspacePath,
+	}
+
+	requestJson, err := json.Marshal(request)
+	if err != nil {
+		fmt.Printf("Error syncing workspace: %v\n", err)
+		return
+	}
+
+	result, err := serverRequest("/workspace/sync", requestJson)
+	if err != nil {
+		fmt.Printf("Error syncing workspace: %v\n", err)
+		return
+	}
+
+	fmt.Println("Message:", result.Body.Message)
 }
 
 func handleWorkspaceList() {

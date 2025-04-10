@@ -42,3 +42,7 @@ type GetWorkspaceResponse struct {
 	Message string     `json:"message"`
 	Data    *Workspace `json:"data,omitempty"`
 }
+
+type SyncWorkspaceRequest struct {
+	Workspace string `json:"workspace"`
+}
