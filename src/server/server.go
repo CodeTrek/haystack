@@ -49,8 +49,6 @@ func Run() {
 		indexer.SyncIfNeeded(conf.Get().ForTest.Path)
 	}
 
-	indexer.RefreshIndexIfNeeded()
-
 	server.StartServer(wg, fmt.Sprintf("127.0.0.1:%d", conf.Get().Global.Port))
 
 	wg.Wait()

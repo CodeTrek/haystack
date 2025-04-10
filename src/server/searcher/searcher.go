@@ -2,7 +2,6 @@ package searcher
 
 import (
 	"bufio"
-	"context"
 	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
@@ -39,15 +38,9 @@ type QueryFilters struct {
 // query is a list of words to search for
 // returns a list of results
 func SearchContent(workspace *workspace.Workspace, req *types.SearchContentRequest) ([]types.SearchContentResult, bool) {
-	timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	startTime := time.Now()
 	var isTimeout = func() bool {
-		select {
-		case <-timeout.Done():
-			return true
-		default:
-			return false
-		}
+		return time.Since(startTime) > 10*time.Second
 	}
 
 	limit := conf.Get().Server.Search.Limit
@@ -77,6 +70,26 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		}
 	}
 
+	// Check if the file should be included in the search
+	var wantFile = func(doc *storage.Document) bool {
+		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(doc.FullPath), pathFilter) {
+			return false
+		}
+
+		// Excluded by filter
+		if excludeFilter != nil && excludeFilter.Match(doc.FullPath, false) {
+			return false
+		}
+
+		// Not included by include filter
+		if includeFilter != nil && !includeFilter.Match(doc.FullPath, false) {
+			return false
+		}
+
+		return true
+	}
+
+	// Compile the query
 	engine := NewSimpleContentSearchEngine(workspace)
 	err := engine.Compile(req.Query, req.CaseSensitive)
 	if err != nil {
@@ -84,68 +97,25 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		return []types.SearchContentResult{}, false
 	}
 
-	// Collect the all related documents
-	results, err := engine.CollectDocuments()
-	if err != nil {
-		return []types.SearchContentResult{}, false
-	}
-
-	docIds := results.DocIds
-	docs := map[string]*storage.Document{}
-	for docid := range docIds {
-		doc, err := storage.GetDocument(workspace.ID, docid, false)
-		if err != nil {
-			continue
-		}
-
-		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(doc.FullPath), pathFilter) {
-			continue
-		}
-
-		// Excluded by filter
-		if excludeFilter != nil && excludeFilter.Match(doc.FullPath, false) {
-			continue
-		}
-
-		// Not included by include filter
-		if includeFilter != nil && !includeFilter.Match(doc.FullPath, false) {
-			continue
-		}
-
-		if doc != nil {
-			docs[docid] = doc
-		}
-	}
-
-	removedDocs := indexer.RefreshFileIfNeeded(workspace.ID, docs)
-	for _, docid := range removedDocs {
-		delete(docs, docid)
-	}
-
 	finalResults := []types.SearchContentResult{}
 	totalHits := 0
-	for _, doc := range docs {
-		if isTimeout() {
-			break
-		}
 
-		relPath, err := filepath.Rel(workspace.Path, doc.FullPath)
-		if err != nil {
-			continue
+	// Match the content of the file line by line
+	var matchFileContent = func(relPath string, doc *storage.Document) (types.SearchContentResult, error) {
+		fileMatch := types.SearchContentResult{
+			File:  filepath.Clean(relPath),
+			Lines: []types.LineMatch{},
 		}
 
 		// Read file and match line by line
 		file, err := os.Open(doc.FullPath)
 		if err != nil {
 			log.Println("Failed to open file:", doc.FullPath, ", error:", err)
-			continue
+			return fileMatch, err
 		}
-		scanner := bufio.NewScanner(file)
+		defer file.Close()
 
-		fileMatch := types.SearchContentResult{
-			File:  filepath.Clean(relPath),
-			Lines: []types.LineMatch{},
-		}
+		scanner := bufio.NewScanner(file)
 
 		lineNumber := 1
 		fileHits := 0
@@ -176,7 +146,41 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 			lineNumber++
 		}
 
-		file.Close()
+		return fileMatch, nil
+	}
+
+	// Collect the all related documents
+	results, err := engine.CollectDocuments()
+	if err != nil {
+		return []types.SearchContentResult{}, false
+	}
+
+	for docid := range results.DocIds {
+		if isTimeout() {
+			break
+		}
+
+		doc, err := storage.GetDocument(workspace.ID, docid, false)
+		if err != nil || doc == nil {
+			continue
+		}
+
+		// Check if the file should be included in the search
+		if !wantFile(doc) {
+			continue
+		}
+
+		// File has been removed, skip it
+		removed, relPath, err := indexer.RefreshFileIfNeeded(workspace, doc)
+		if err != nil || removed {
+			continue
+		}
+
+		fileMatch, err := matchFileContent(relPath, doc)
+		if err != nil {
+			continue
+		}
+
 		if len(fileMatch.Lines) > 0 {
 			finalResults = append(finalResults, fileMatch)
 		}

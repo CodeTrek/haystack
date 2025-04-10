@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 )
 
 var (
@@ -37,23 +36,23 @@ func RefreshIndexIfNeeded() {
 
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
 // A workspace needs to be synced if:
-// 1. It has never been synced (LastFullSync is zero)
-// 2. It was last synced more than 24 hours ago
+// 1. It has never been successfully synced (LastFullSync is zero)
 func SyncIfNeeded(workspacePath string) error {
 	workspace, err := workspace.GetOrCreate(workspacePath)
 	if err != nil {
 		return fmt.Errorf("failed to get or create workspace: %v", err)
 	}
 
-	if workspace.LastFullSync.IsZero() ||
-		workspace.LastFullSync.Before(time.Now().Add(-time.Hour*24)) {
-		if err := scanner.Add(workspace); err != nil {
-			return fmt.Errorf("failed to add workspace to scanner queue: %v", err)
-		}
+	if workspace.LastFullSync.IsZero() {
+		return Sync(workspace)
 	} else {
 		log.Printf("Workspace %s is up to date, skipping", workspacePath)
 	}
 	return nil
+}
+
+func Sync(workspace *workspace.Workspace) error {
+	return scanner.Add(workspace)
 }
 
 func AddOrSyncFile(workspace *workspace.Workspace, relPath string) error {
@@ -101,7 +100,7 @@ func RemoveFile(workspace *workspace.Workspace, relPath string) error {
 	return nil
 }
 
-func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) []string {
+func RefreshFilesIfNeeded(workspaceId string, docs map[string]*storage.Document) []string {
 	workspace, err := workspace.Get(workspaceId)
 	if err != nil {
 		return []string{}
@@ -109,25 +108,37 @@ func RefreshFileIfNeeded(workspaceId string, docs map[string]*storage.Document) 
 
 	removedDocs := []string{}
 	for _, doc := range docs {
-		relPath, err := filepath.Rel(workspace.Path, doc.FullPath)
+		removed, _, err := RefreshFileIfNeeded(workspace, doc)
 		if err != nil {
 			continue
 		}
 
-		stat, err := os.Stat(doc.FullPath)
-		// If the file becomes a directory or there is an error, remove it
-		if err != nil || stat.IsDir() {
-			RemoveFile(workspace, relPath)
+		if removed {
 			removedDocs = append(removedDocs, doc.ID)
-			continue
-		}
-
-		// If the file has been modified, add it to the parser queue
-		if stat.ModTime().UnixNano() != doc.ModifiedTime {
-			parser.Add(workspace, relPath)
 		}
 	}
 
 	// Return the list of removed documents
 	return removedDocs
+}
+
+func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *storage.Document) (removed bool, relPath string, err error) {
+	relPath, err = filepath.Rel(workspace.Path, doc.FullPath)
+	if err != nil {
+		return false, "", err
+	}
+
+	stat, err := os.Stat(doc.FullPath)
+	// If the file becomes a directory or there is an error, remove it
+	if err != nil || stat.IsDir() {
+		RemoveFile(workspace, relPath)
+		return true, relPath, nil
+	}
+
+	// If the file has been modified, add it to the parser queue
+	if stat.ModTime().UnixNano() != doc.ModifiedTime {
+		parser.Add(workspace, relPath)
+	}
+
+	return false, relPath, nil
 }
