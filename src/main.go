@@ -30,12 +30,6 @@ func main() {
 	running.RegisterLockFile(lockFile)
 
 	if running.IsDaemonMode() {
-		if !running.IsDevVersion() {
-			if running.InstallPath() != running.ExecutablePath() {
-				log.Fatal("Haystack daemon is running in a non-standard path. Please run `haystack install` to install it in the standard path.")
-				os.Exit(1)
-			}
-		}
 		server.Run()
 		if running.IsRestart() {
 			running.StartNewServer()
