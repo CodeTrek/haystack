@@ -30,18 +30,17 @@ func IsDevVersion() bool {
 	return version == "dev"
 }
 
-func Init() error {
-	var err error
-	userHomeDir, err = os.UserHomeDir()
-	if err != nil {
-		log.Fatalf("Failed to get user's home directory: %v", err)
-		return err
-	}
-
-	return nil
-}
+var initHomeDir sync.Once
 
 func UserHomeDir() string {
+	initHomeDir.Do(func() {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatalf("Failed to get user's home directory: %v", err)
+			os.Exit(1)
+		}
+		userHomeDir = homeDir
+	})
 	return userHomeDir
 }
 

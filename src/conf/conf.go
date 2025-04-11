@@ -44,7 +44,7 @@ type Filters struct {
 }
 
 type Global struct {
-	HomePath string `yaml:"home_path,omitempty"`
+	DataPath string `yaml:"data_path,omitempty"`
 	Port     int    `yaml:"port,omitempty"`
 }
 
@@ -87,14 +87,13 @@ func Get() *Conf {
 }
 
 func Load() error {
-	homePath := filepath.Join(running.UserHomeDir(), ".haystack")
-
 	search := []string{
 		filepath.Join(running.ExecutablePath(), "config.local.yaml"),
-		filepath.Join(homePath, "config.yaml"),
 		filepath.Join(running.ExecutablePath(), "config.yaml"),
-		filepath.Join(running.InstallPath(), "config.yaml"),
-		filepath.Join(running.ExecutablePath(), "config.example.yaml"),
+	}
+
+	if running.IsDevVersion() {
+		search = append(search, filepath.Join(running.ExecutablePath(), "config.example.yaml"))
 	}
 
 	for _, path := range search {
@@ -106,12 +105,12 @@ func Load() error {
 
 	if confFile == "" {
 		// Create a new config file
-		confFile = filepath.Join(homePath, "config.yaml")
+		confFile = filepath.Join(running.ExecutablePath(), "config.yaml")
 	}
 
 	conf = &Conf{
 		Global: Global{
-			HomePath: homePath,
+			DataPath: filepath.Join(running.UserHomeDir(), ".haystack"),
 			Port:     DefaultPort,
 		},
 		Client: Client{
@@ -140,11 +139,11 @@ func Load() error {
 		return err
 	}
 
-	if conf.Global.HomePath == "" {
-		conf.Global.HomePath = homePath
+	if conf.Global.DataPath == "" {
+		conf.Global.DataPath = running.UserHomeDir()
 	}
 
-	if err := os.Mkdir(conf.Global.HomePath, 0755); err != nil {
+	if err := os.Mkdir(conf.Global.DataPath, 0755); err != nil {
 		if !os.IsExist(err) {
 			log.Fatalf("Failed to create home directory: %v", err)
 			return err

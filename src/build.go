@@ -5,7 +5,6 @@ package main
 import (
 	"archive/zip"
 	"fmt"
-	fsutils "haystack/utils/fs"
 	"io"
 	"os"
 	"os/exec"
@@ -36,18 +35,6 @@ func main() {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		panic(err)
 	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	targetDir := filepath.Join(wd, outputDir, "../extensions/vscode/pkgs")
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("targetDir: %s\n", targetDir)
 
 	for _, t := range targets {
 		fmt.Printf("🔨 Building for %s/%s...\n", t.GOOS, t.GOARCH)
@@ -86,17 +73,19 @@ func main() {
 			fmt.Fprintf(os.Stderr, "❌ Zip failed: %v\n", err)
 		} else {
 			fmt.Printf("✅ Built and zipped: %s\n", zipName)
-			fsutils.CopyFile(zipPath, filepath.Join(targetDir, zipName))
 		}
 
 		_ = os.Remove(binPath) // 删除原始二进制文件
 	}
+
+	os.WriteFile(filepath.Join(outputDir, "VERSION"), []byte(version), 0644)
 }
 
 func getVersion() string {
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "dev"
+		fmt.Println("❌ Failed to read VERSION file:", err)
+		os.Exit(1)
 	}
 	return strings.TrimSpace(string(data))
 }

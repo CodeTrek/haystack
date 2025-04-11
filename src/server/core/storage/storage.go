@@ -19,7 +19,7 @@ const StorageVersion = "1.0"
 var closeOnce sync.Once
 
 func Init() error {
-	homePath := conf.Get().Global.HomePath
+	homePath := conf.Get().Global.DataPath
 	storagePath := filepath.Join(homePath, "data")
 
 	log.Printf("Init storage path: %s", storagePath)

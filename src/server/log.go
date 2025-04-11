@@ -13,7 +13,7 @@ func initLog() {
 	if conf.Get().Server.LoggingStdout {
 		log.SetOutput(os.Stdout)
 	} else {
-		dir := filepath.Join(conf.Get().Global.HomePath, "logs")
+		dir := filepath.Join(conf.Get().Global.DataPath, "logs")
 		logFile := filepath.Join(dir, "server.log")
 
 		log.SetOutput(&lumberjack.Logger{

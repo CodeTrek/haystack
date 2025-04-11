@@ -27,8 +27,6 @@ func processCommand(args []string) {
 		handleWorkspace(args[1:])
 	case "server":
 		handleServer(args[1:])
-	case "install":
-		handleInstall(args[1:])
 	case "version":
 		fmt.Println(running.Version())
 	case "help":
@@ -50,6 +48,5 @@ func printUsage() {
 	fmt.Println("  search          Search for documents matching the query")
 	fmt.Println("  server          Server commands")
 	fmt.Println("  workspace       Workspace commands")
-	fmt.Println("  install         Install commands")
 	fmt.Println("  help <command>  Show help for a specific command")
 }

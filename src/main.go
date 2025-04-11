@@ -7,7 +7,6 @@ import (
 	"haystack/server"
 	"haystack/shared/running"
 	"log"
-	"os"
 	"path/filepath"
 )
 
@@ -17,16 +16,12 @@ func main() {
 	running.SetVersion(version)
 
 	flag.Parse()
-	if err := running.Init(); err != nil {
-		os.Exit(1)
-	}
-
 	if err := conf.Load(); err != nil {
 		log.Fatal("Error loading config:", err)
 		return
 	}
 
-	lockFile := filepath.Join(conf.Get().Global.HomePath, "server.lock")
+	lockFile := filepath.Join(conf.Get().Global.DataPath, "server.lock")
 	running.RegisterLockFile(lockFile)
 
 	if running.IsDaemonMode() {

@@ -11,7 +11,7 @@
 # Copy the file to one of the above place.
 
 global:
-  home_path: # the path to store the database files, default is $HOME/.haystack/index
+  data_path: # the path to store the database files, default is $HOME/.haystack/index
 
 client:
   # client mode specific configuration
