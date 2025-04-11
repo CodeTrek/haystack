@@ -12,11 +12,10 @@ import (
 )
 
 var (
-	shutdown         context.Context
-	cancel           func()
-	initShutdownOnce sync.Once
-	shutdownOnce     sync.Once
-	restart          atomic.Bool
+	shutdown     context.Context
+	cancel       func()
+	shutdownOnce *sync.Once
+	restart      atomic.Bool
 
 	ErrShutdown = errors.New("server is shutting down")
 )
@@ -24,24 +23,23 @@ var (
 func InitShutdown(wg *sync.WaitGroup) {
 	restart.Store(false)
 
-	initShutdownOnce.Do(func() {
-		shutdown, cancel = context.WithCancel(context.Background())
-		wg.Add(1)
+	shutdown, cancel = context.WithCancel(context.Background())
+	wg.Add(1)
+	shutdownOnce = &sync.Once{}
 
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-		go func() {
-			defer wg.Done()
+	go func() {
+		defer wg.Done()
 
-			select {
-			case <-c:
-				log.Println("Received interrupt signal, shutting down...")
-				Shutdown()
-			case <-shutdown.Done():
-			}
-		}()
-	})
+		select {
+		case <-c:
+			log.Println("Received interrupt signal, shutting down...")
+			Shutdown()
+		case <-shutdown.Done():
+		}
+	}()
 }
 
 func Restart() {

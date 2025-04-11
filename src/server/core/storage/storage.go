@@ -4,7 +4,6 @@ import (
 	"context"
 	"haystack/conf"
 	"haystack/server/core/storage/pebble"
-	"haystack/shared/running"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,9 +15,11 @@ var db *pebble.DB
 
 const StorageVersion = "1.0"
 
-var closeOnce sync.Once
+var closeOnce *sync.Once
 
-func Init() error {
+func Init(shutdown context.Context) error {
+	closeOnce = &sync.Once{}
+
 	homePath := conf.Get().Global.DataPath
 	storagePath := filepath.Join(homePath, "data")
 
@@ -42,7 +43,7 @@ func Init() error {
 
 		for {
 			select {
-			case <-running.GetShutdown().Done():
+			case <-shutdown.Done():
 				return
 			case <-timer.C:
 				flushPendingWrites(false)

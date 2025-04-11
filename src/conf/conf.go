@@ -31,6 +31,8 @@ var (
 	DefaultInclude = []string{"*.cc", "*.c", "*.hpp", "*.cpp", "*.h", "*.md", "*.js", "*.ts", "*.txt", "*.mm", "*.java",
 		"*.cs", "*.py", "*.kt", "*.go", "*.rb", "*.php", "*.html", "*.css", "*.yaml", "*.yml", "*.toml", "*.xml", "*.sql",
 		"*.sh", "Makefile", "*.bat", "*.ps1", "*.sln", "*.json", "*.vcxproj", "*.vcproj", "*.vcxproj.filters"}
+	DefaultExclude = []string{"node_modules/", "dist/", "build/", "out/", "obj/", "log/", "logs/", ".*", "*.log",
+		"*.log.*", "*log.txt"}
 )
 
 type Exclude struct {
@@ -78,7 +80,37 @@ type Conf struct {
 	} `yaml:"for_test,omitempty"`
 }
 
-var conf *Conf
+var conf = &Conf{
+	Global: Global{
+		Port: DefaultPort,
+	},
+	Client: Client{
+		DefaultWorkspace: "",
+		DefaultLimit: types.SearchLimit{
+			MaxResults:        DefaultClientMaxResults,
+			MaxResultsPerFile: DefaultClientMaxResultsPerFile,
+		},
+	},
+	Server: Server{
+		MaxFileSize:  DefaultMaxFileSize,
+		IndexWorkers: DefaultIndexWorkers,
+		Filters: Filters{
+			Include: DefaultInclude,
+			Exclude: Exclude{
+				UseGitIgnore: false,
+				Customized:   DefaultExclude,
+			},
+		},
+		Search: Search{
+			MaxWildcardLength:  DefaultMaxSearchWildcardLength,
+			MaxKeywordDistance: DefaultMaxSearchKeywordDistance,
+			Limit: types.SearchLimit{
+				MaxResults:        DefaultMaxResults,
+				MaxResultsPerFile: DefaultMaxResultsPerFile,
+			},
+		},
+	},
+}
 
 var confFile string
 
@@ -106,32 +138,6 @@ func Load() error {
 	if confFile == "" {
 		// Create a new config file
 		confFile = filepath.Join(running.ExecutablePath(), "config.yaml")
-	}
-
-	conf = &Conf{
-		Global: Global{
-			DataPath: filepath.Join(running.UserHomeDir(), ".haystack"),
-			Port:     DefaultPort,
-		},
-		Client: Client{
-			DefaultWorkspace: "",
-			DefaultLimit: types.SearchLimit{
-				MaxResults:        DefaultClientMaxResults,
-				MaxResultsPerFile: DefaultClientMaxResultsPerFile,
-			},
-		},
-		Server: Server{
-			MaxFileSize:  DefaultMaxFileSize,
-			IndexWorkers: DefaultIndexWorkers,
-			Search: Search{
-				MaxWildcardLength:  DefaultMaxSearchWildcardLength,
-				MaxKeywordDistance: DefaultMaxSearchKeywordDistance,
-				Limit: types.SearchLimit{
-					MaxResults:        DefaultMaxResults,
-					MaxResultsPerFile: DefaultMaxResultsPerFile,
-				},
-			},
-		},
 	}
 
 	confBytes := fsutils.ReadFileWithDefault(confFile, []byte(``))

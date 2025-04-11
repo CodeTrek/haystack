@@ -130,16 +130,3 @@ func EncodeKeywordIndexValue(docids []string) []byte {
 func DecodeKeywordIndexValue(data []byte) []string {
 	return strings.Split(string(data), "|")
 }
-
-func EncodeDocumentValue(doc *Document) ([]byte, error) {
-	return json.Marshal(doc)
-}
-
-func DecodeDocumentValue(data []byte) (*Document, error) {
-	doc := Document{}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil, err
-	}
-
-	return &doc, nil
-}

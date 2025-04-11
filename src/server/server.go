@@ -30,13 +30,13 @@ func Run() {
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
 
-	if err := storage.Init(); err != nil {
+	if err := storage.Init(running.GetShutdown()); err != nil {
 		log.Fatal("Error initializing storage:", err)
 		running.Shutdown()
 		return
 	}
 
-	if err := workspace.Init(wg); err != nil {
+	if err := workspace.Init(running.GetShutdown(), wg); err != nil {
 		log.Fatal("Error initializing workspace:", err)
 		running.Shutdown()
 		return
