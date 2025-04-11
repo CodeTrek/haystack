@@ -10,17 +10,29 @@ const getStateKey = (key: string) => `${isDev() ? 'dev.' : ''}${key}`;
 let haystackProvider: HaystackProvider | undefined;
 let searchViewProvider: SearchViewProvider | undefined;
 
+const haystackSupportedPlatforms = {
+    "linux-x64": "linux-amd64",
+    "linux-arm64": "linux-arm64",
+    "darwin-x64": "darwin-amd64",
+    "darwin-arm64": "darwin-arm64",
+    "win32-x64": "windows-amd64",
+    "win32-arm64": "windows-arm64",
+}
+
+const currentPlatform = `${process.platform}-${process.arch}`;
+const isHaystackSupported = currentPlatform in haystackSupportedPlatforms;
+
 /**
  * This function is called when your extension is activated
  */
 export async function activate(context: vscode.ExtensionContext) {
     console.log(`haystack is running in ${isDev() ? 'dev' : 'prod'} mode`);
-
+    console.log(`haystack is supported on ${currentPlatform}? ${isHaystackSupported ? 'yes' : 'no'}`);
     // Simple activation logging without version checks
     console.log('Haystack extension activated');
 
     haystackProvider = new HaystackProvider();
-    searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider);
+    searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider, isHaystackSupported);
 
     // Register search view
     context.subscriptions.push(
@@ -38,33 +50,39 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register command to search selected text
     context.subscriptions.push(
         vscode.commands.registerCommand('haystack.searchSelectedText', async () => {
-            // Get active editor
             const editor = vscode.window.activeTextEditor;
+
             if (!editor) {
-                vscode.window.showInformationMessage('No active editor found');
+                // No active editor, just focus the view
+                await vscode.commands.executeCommand('haystackSearch.focus');
                 return;
             }
 
-            // Get selected text
+            let searchText = '';
             const selection = editor.selection;
-            if (selection.isEmpty) {
-                vscode.window.showInformationMessage('No text selected');
-                return;
+
+            if (!selection.isEmpty) {
+                // Use selected text if available
+                searchText = editor.document.getText(selection);
+            } else {
+                // No selection, try word at cursor
+                const wordRange = editor.document.getWordRangeAtPosition(selection.active);
+                if (wordRange) {
+                    searchText = editor.document.getText(wordRange);
+                }
             }
 
-            const selectedText = editor.document.getText(selection);
-            if (!selectedText) {
-                vscode.window.showInformationMessage('Selected text is empty');
-                return;
-            }
-
-            // Show search view if it's not visible
-            await vscode.commands.executeCommand('haystackSearch.focus');
-
-            // Perform search with selected text
+            // Ensure search view is visible but keep focus in the editor
             if (searchViewProvider) {
-                searchViewProvider.searchText(selectedText);
+                searchViewProvider.revealView(true);
             }
+
+            // Perform search if we found text and the provider exists
+            if (searchText && searchViewProvider) {
+                searchViewProvider.searchText(searchText);
+            }
+            // If no text was found (no selection, no word at cursor),
+            // the view is already focused, so nothing more to do.
         })
     );
 

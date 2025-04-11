@@ -12,16 +12,19 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
     private readonly _searchHandlers: SearchHandlers;
     private _statusBarItem: vscode.StatusBarItem;
     private _statusUpdateInterval: NodeJS.Timeout | null = null;
+    private readonly _isHaystackSupported: boolean;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        private readonly _haystackProvider: HaystackProvider
+        private readonly _haystackProvider: HaystackProvider,
+        isHaystackSupported: boolean
     ) {
         this._searchHandlers = new SearchHandlers(_haystackProvider);
         this._statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Left,
             100
         );
+        this._isHaystackSupported = isHaystackSupported;
         // Start status updates immediately when the provider is created
         this.startStatusUpdates();
     }
@@ -46,7 +49,7 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
 
         // Set HTML content only if it hasn't been set before
         if (!webviewView.webview.html) {
-            webviewView.webview.html = getSearchTemplate(webviewView.webview, this._extensionUri);
+            webviewView.webview.html = getSearchTemplate(webviewView.webview, this._extensionUri, this._isHaystackSupported);
         }
 
         // Handle messages from the webview
@@ -93,6 +96,17 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         // Use the search handlers to perform the search immediately
         if (this._view.visible) {
             this._searchHandlers.handleSearch(this._view.webview, text, defaultOptions);
+        }
+    }
+
+    /**
+     * Reveals the search view in the sidebar
+     * @param preserveFocus If true, the editor keeps focus; otherwise, the view gains focus.
+     */
+    public revealView(preserveFocus: boolean = true): void {
+        if (this._view) {
+            // Reveal the view. preserveFocus=true means the editor keeps focus.
+            this._view.show(preserveFocus);
         }
     }
 

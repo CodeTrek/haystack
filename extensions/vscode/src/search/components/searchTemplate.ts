@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export function getSearchTemplate(webview: any, extensionUri: vscode.Uri) {
+export function getSearchTemplate(webview: any, extensionUri: vscode.Uri, isHaystackSupported: boolean) {
     // Get paths to resource files
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'search.js'));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'search.css'));
@@ -12,6 +12,11 @@ export function getSearchTemplate(webview: any, extensionUri: vscode.Uri) {
         script-src ${webview.cspSource};
         font-src ${webview.cspSource};
     `;
+
+    // Conditionally add the warning message
+    const platformWarning = !isHaystackSupported
+        ? `<div class="platform-warning">Haystack does not support your current platform (${process.platform}-${process.arch}). Search may not work correctly.</div>`
+        : '';
 
     return `
         <!DOCTYPE html>
@@ -25,6 +30,7 @@ export function getSearchTemplate(webview: any, extensionUri: vscode.Uri) {
         </head>
         <body>
             <div class="search-container">
+                ${platformWarning}
                 <div class="search-input-container">
                     <input type="text" class="search-input" placeholder="Search in files..." id="searchInput">
                     <button class="search-option-button" id="caseSensitiveBtn" title="Case sensitive">Aa</button>
