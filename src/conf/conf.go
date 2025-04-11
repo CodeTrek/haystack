@@ -34,51 +34,53 @@ var (
 )
 
 type Exclude struct {
-	UseGitIgnore bool     `yaml:"use_git_ignore" json:"use_git_ignore"`
-	Customized   []string `yaml:"customized" json:"customized"` // Won't be used if enable_git_ignore is true
+	UseGitIgnore bool     `yaml:"use_git_ignore,omitempty" json:"use_git_ignore,omitempty"`
+	Customized   []string `yaml:"customized,omitempty"     json:"customized,omitempty"` // Won't be used if enable_git_ignore is true
 }
 
 type Filters struct {
-	Exclude Exclude  `yaml:"exclude" json:"exclude"`
-	Include []string `yaml:"include" optional:"true" json:"include"`
+	Exclude Exclude  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
+	Include []string `yaml:"include,omitempty" optional:"true" json:"include,omitempty"`
 }
 
 type Global struct {
-	HomePath string `yaml:"home_path"`
-	Port     int    `yaml:"port"`
+	HomePath string `yaml:"home_path,omitempty"`
+	Port     int    `yaml:"port,omitempty"`
 }
 
 type Client struct {
-	DefaultWorkspace string            `yaml:"default_workspace"`
-	DefaultLimit     types.SearchLimit `yaml:"default_limit"`
+	DefaultWorkspace string            `yaml:"default_workspace,omitempty"`
+	DefaultLimit     types.SearchLimit `yaml:"default_limit,omitempty"`
 }
 
 type Search struct {
-	MaxWildcardLength  int               `yaml:"max_wildcard_length"`
-	MaxKeywordDistance int               `yaml:"max_keyword_distance"`
-	Limit              types.SearchLimit `yaml:"limit"`
+	MaxWildcardLength  int               `yaml:"max_wildcard_length,omitempty"`
+	MaxKeywordDistance int               `yaml:"max_keyword_distance,omitempty"`
+	Limit              types.SearchLimit `yaml:"limit,omitempty"`
 }
 
 type Server struct {
-	MaxFileSize  int64   `yaml:"max_file_size"`
-	IndexWorkers int     `yaml:"index_workers"`
-	Filters      Filters `yaml:"filters"`
-	Search       Search  `yaml:"search"`
+	MaxFileSize  int64   `yaml:"max_file_size,omitempty"`
+	IndexWorkers int     `yaml:"index_workers,omitempty"`
+	Filters      Filters `yaml:"filters,omitempty"`
+	Search       Search  `yaml:"search,omitempty"`
 
-	LoggingStdout bool `yaml:"logging_stdout"`
+	LoggingStdout bool `yaml:"logging_stdout,omitempty"`
 }
 
 type Conf struct {
-	Global Global `yaml:"global"`
-	Client Client `yaml:"client"`
-	Server Server `yaml:"server"`
+	Global Global `yaml:"global,omitempty"`
+	Client Client `yaml:"client,omitempty"`
+	Server Server `yaml:"server,omitempty"`
 
 	ForTest struct {
-		Path string `yaml:"path"`
-	} `yaml:"for_test"`
+		Path string `yaml:"path,omitempty"`
+	} `yaml:"for_test,omitempty"`
 }
 
 var conf *Conf
+
+var confFile string
 
 func Get() *Conf {
 	return conf
@@ -89,17 +91,22 @@ func Load() error {
 
 	search := []string{
 		filepath.Join(running.ExecutablePath(), "config.local.yaml"),
-		filepath.Join(running.ExecutablePath(), "config.yaml"),
 		filepath.Join(homePath, "config.yaml"),
+		filepath.Join(running.ExecutablePath(), "config.yaml"),
+		filepath.Join(running.InstallPath(), "config.yaml"),
 		filepath.Join(running.ExecutablePath(), "config.example.yaml"),
 	}
 
-	var confFile *string
 	for _, path := range search {
-		confFile = &path
 		if _, err := os.Stat(path); err == nil {
+			confFile = path
 			break
 		}
+	}
+
+	if confFile == "" {
+		// Create a new config file
+		confFile = filepath.Join(homePath, "config.yaml")
 	}
 
 	conf = &Conf{
@@ -128,7 +135,7 @@ func Load() error {
 		},
 	}
 
-	confBytes := fsutils.ReadFileWithDefault(*confFile, []byte(``))
+	confBytes := fsutils.ReadFileWithDefault(confFile, []byte(``))
 	if err := yaml.Unmarshal(confBytes, conf); err != nil {
 		return err
 	}

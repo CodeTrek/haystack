@@ -30,7 +30,7 @@ func processCommand(args []string) {
 	case "install":
 		handleInstall(args[1:])
 	case "version":
-		fmt.Println("Version:", running.Version())
+		fmt.Println(running.Version())
 	case "help":
 		if len(args) > 1 {
 			processCommand(append(args[1:2], "-h"))

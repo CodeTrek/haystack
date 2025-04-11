@@ -2,6 +2,7 @@ package running
 
 import (
 	"flag"
+	"haystack/utils"
 	"log"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func Executable() string {
 			log.Fatalf("Failed to get executable path: %v", err)
 			return
 		}
-		executable = path
+		executable = utils.NormalizePath(path)
 	})
 	return executable
 }
