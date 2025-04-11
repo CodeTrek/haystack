@@ -222,7 +222,42 @@ export class HaystackProvider {
                 workspace: this.workspaceRoot
             });
 
-            if (response.data.code !== 0) {
+            if (response.data.code === 1) {
+                // Workspace not found, try to create it
+                console.log(`Haystack: Workspace '${this.workspaceRoot}' not found. Attempting to create...`);
+                try {
+                    await this.createWorkspace();
+                    console.log(`Haystack: Workspace '${this.workspaceRoot}' created successfully. Initial sync triggered.`);
+                    // Return status indicating indexing has started
+                    return {
+                        indexing: true,
+                        totalFiles: 0, // Total files unknown until first sync completes
+                        indexedFiles: 0
+                    };
+                } catch (creationError: any) {
+                    const errorMessage = creationError.message || String(creationError);
+                    if (errorMessage.includes('Workspace already exists')) {
+                        console.warn(`Haystack: Workspace '${this.workspaceRoot}' was created concurrently.`);
+                        // Workspace created by another process, status will update shortly
+                        return {
+                            indexing: false,
+                            totalFiles: 0,
+                            indexedFiles: 0,
+                            error: 'Workspace status update pending after concurrent creation'
+                        };
+                    } else {
+                        console.error(`Haystack: Failed to automatically create workspace '${this.workspaceRoot}': ${errorMessage}`);
+                        return {
+                            indexing: false,
+                            totalFiles: 0,
+                            indexedFiles: 0,
+                            error: `Failed to automatically create workspace: ${errorMessage}`
+                        };
+                    }
+                }
+            } else if (response.data.code !== 0) {
+                // Handle other non-success codes
+                console.error(`Haystack: Failed to get workspace status for '${this.workspaceRoot}': ${response.data.message}`);
                 return {
                     indexing: false,
                     totalFiles: 0,
@@ -231,27 +266,31 @@ export class HaystackProvider {
                 };
             }
 
-            // Data might be undefined due to omitempty
+            // Code is 0, workspace exists, process data
             if (!response.data.data) {
+                 console.error(`Haystack: Workspace data missing in response for '${this.workspaceRoot}'.`);
                 return {
                     indexing: false,
                     totalFiles: 0,
                     indexedFiles: 0,
-                    error: 'Workspace not found'
+                    error: 'Workspace data missing in response' // Or handle as not found?
                 };
             }
 
+            const data = response.data.data;
             return {
-                indexing: response.data.data.indexing,
-                totalFiles: response.data.data.total_files,
-                indexedFiles: response.data.data.total_files
+                indexing: data.indexing || false,
+                totalFiles: data.total_files || 0,
+                // Assuming backend adds indexed_files when indexing is true
+                indexedFiles: data.indexed_files || 0
             };
-        } catch (error) {
+        } catch (error: any) {
+             console.error(`Haystack: Failed to connect or get workspace status for '${this.workspaceRoot}': ${error.message || error}`);
             return {
                 indexing: false,
                 totalFiles: 0,
                 indexedFiles: 0,
-                error: `Failed to get workspace status: ${error}`
+                error: `Failed to get workspace status: ${error.message || error}`
             };
         }
     }

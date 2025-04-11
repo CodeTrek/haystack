@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"fmt"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
 	"log"
@@ -26,27 +27,23 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Indexer started.")
 }
 
-func RefreshIndexIfNeeded() {
-	workspacePaths := workspace.GetAllPaths()
-	for _, w := range workspacePaths {
-		SyncIfNeeded(w)
-	}
-}
-
 func CreateWorkspace(workspacePath string) (*workspace.Workspace, error) {
-	return workspace.Create(workspacePath)
+	w, err := workspace.Create(workspacePath)
+	if err != nil {
+		return nil, err
+	}
+
+	Sync(w)
+	return w, nil
 }
 
 // SyncIfNeeded checks if a workspace needs to be synced and adds it to the scanner queue if necessary.
 // A workspace needs to be synced if:
 // 1. It has never been successfully synced (LastFullSync is zero)
 func SyncIfNeeded(workspacePath string) error {
-	workspace, err := workspace.GetByPath(workspacePath)
-	if err != nil {
-		workspace, err = CreateWorkspace(workspacePath)
-		if err != nil {
-			return err
-		}
+	workspace, _ := workspace.GetByPath(workspacePath)
+	if workspace == nil {
+		return fmt.Errorf("workspace not found")
 	}
 
 	if workspace.LastFullSync.IsZero() {
@@ -98,9 +95,7 @@ func RemoveFile(workspace *workspace.Workspace, relPath string) error {
 
 	storage.DeleteDocument(workspace.ID, docid)
 
-	workspace.Mutex.Lock()
-	workspace.TotalFiles--
-	workspace.Mutex.Unlock()
+	workspace.AddTotalFiles(-1)
 
 	workspace.Save()
 	return nil

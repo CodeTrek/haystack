@@ -4,14 +4,6 @@ import (
 	"time"
 )
 
-type CreateWorkspaceRequest struct {
-	Workspace string `json:"workspace"`
-}
-
-type DeleteWorkspaceRequest struct {
-	Workspace string `json:"workspace"`
-}
-
 type Workspace struct {
 	ID         string `json:"id"`
 	Path       string `json:"path"`
@@ -25,6 +17,20 @@ type Workspace struct {
 
 type Workspaces struct {
 	Workspaces []Workspace `json:"workspaces"`
+}
+
+type CreateWorkspaceRequest struct {
+	Workspace string `json:"workspace"`
+}
+
+type DeleteWorkspaceRequest struct {
+	Workspace string `json:"workspace"`
+}
+
+type DeleteWorkspaceResponse struct {
+	Code    int       `json:"code"`
+	Message string    `json:"message"`
+	Data    Workspace `json:"data"`
 }
 
 type ListWorkspaceResponse struct {

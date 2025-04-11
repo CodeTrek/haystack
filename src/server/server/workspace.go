@@ -8,6 +8,7 @@ import (
 	"haystack/shared/types"
 	"log"
 	"net/http"
+	"path/filepath"
 )
 
 func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +40,7 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err = workspace.Create(request.Workspace)
+	_, err = indexer.CreateWorkspace(request.Workspace)
 	if err != nil {
 		log.Printf("Create workspace `%s`: failed to get or create: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
@@ -48,8 +49,6 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	indexer.SyncIfNeeded(ws.Path)
 
 	log.Printf("Created workspace `%s`", request.Workspace)
 	json.NewEncoder(w).Encode(types.CommonResponse{
@@ -69,17 +68,33 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
+	if request.Workspace == "" {
+		json.NewEncoder(w).Encode(types.CommonResponse{
+			Code:    1,
+			Message: "Workspace path is required",
+		})
+		return
+	}
+
+	if !filepath.IsAbs(request.Workspace) {
+		json.NewEncoder(w).Encode(types.CommonResponse{
+			Code:    2,
+			Message: "Workspace path must be absolute",
+		})
+		return
+	}
+
 	ws, err := workspace.GetByPath(request.Workspace)
 	if err != nil {
 		log.Printf("Delete workspace `%s`: failed to get: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
-			Code:    1,
+			Code:    3,
 			Message: fmt.Sprintf("Failed to delete workspace: %v", err),
 		})
 		return
 	}
 
-	err = ws.Delete()
+	err = workspace.Delete(ws.ID)
 	if err != nil {
 		log.Printf("Delete workspace `%s`: failed to delete: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
@@ -90,9 +105,18 @@ func handleDeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Deleted workspace `%s`", request.Workspace)
-	json.NewEncoder(w).Encode(types.CommonResponse{
+	json.NewEncoder(w).Encode(types.DeleteWorkspaceResponse{
 		Code:    0,
-		Message: "Ok",
+		Message: "Deleted",
+		Data: types.Workspace{
+			ID:           ws.ID,
+			Path:         ws.Path,
+			TotalFiles:   ws.GetTotalFiles(),
+			CreatedAt:    ws.CreatedAt,
+			LastAccessed: ws.LastAccessed,
+			LastFullSync: ws.LastFullSync,
+			Indexing:     false,
+		},
 	})
 }
 
@@ -138,13 +162,8 @@ func handleGetWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws.Mutex.Lock()
-	totalFiles := ws.TotalFiles
-	indexing := ws.IndexingStatus != nil
-	if totalFiles == 0 && indexing {
-		totalFiles = ws.IndexingStatus.TotalFiles
-	}
-	ws.Mutex.Unlock()
+	totalFiles := ws.GetTotalFiles()
+	indexing := ws.GetIndexingStatus() != nil
 
 	json.NewEncoder(w).Encode(types.GetWorkspaceResponse{
 		Code:    0,

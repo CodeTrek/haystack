@@ -65,6 +65,12 @@ func (w *Writer) processDocs(docs []*WriteDoc) {
 	newDocs := make(map[string][]*storage.Document)
 	existingDocs := make(map[string][]*storage.Document)
 	for _, doc := range docs {
+		if doc.Workspace.IsDeleted() {
+			delete(newDocs, doc.Workspace.ID)
+			delete(existingDocs, doc.Workspace.ID)
+			continue
+		}
+
 		if doc.CreateNew {
 			newDocs[doc.Workspace.ID] = append(newDocs[doc.Workspace.ID], doc.Document)
 		} else {
@@ -97,6 +103,10 @@ func (w *Writer) getPendingWrites(limit int) []*WriteDoc {
 }
 
 func (w *Writer) Add(workspace *workspace.Workspace, doc *storage.Document, createNew bool) {
+	if workspace.IsDeleted() {
+		return
+	}
+
 	w.docs <- &WriteDoc{
 		Workspace: workspace,
 		Document:  doc,

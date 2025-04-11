@@ -49,6 +49,12 @@ func SaveWorkspace(id string, workspaceJson string) error {
 	return db.Put(EncodeWorkspaceKey(id), []byte(workspaceJson))
 }
 
+// DeleteWorkspace deletes a workspace and all of its documents and keywords
 func DeleteWorkspace(id string) error {
-	return nil
+	batch := db.Batch()
+	batch.Delete(EncodeWorkspaceKey(id))
+	batch.DeletePrefix(EncodeDocumentMetaKey(id, ""))
+	batch.DeletePrefix(EncodeDocumentWordsKey(id, ""))
+	batch.DeletePrefix(EncodeKeywordIndexKeyPrefix(id, ""))
+	return batch.Commit()
 }

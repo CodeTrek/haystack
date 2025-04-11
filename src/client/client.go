@@ -46,10 +46,10 @@ func processCommand(args []string) {
 func printUsage() {
 	fmt.Println("Usage: " + running.ExecutableName() + " <command> [arguments]")
 	fmt.Println("Commands:")
-	fmt.Println("  version               Show current version")
-	fmt.Println("  search <query>        Search for documents matching the query")
-	fmt.Println("  server <commands>     Server commands")
-	fmt.Println("  workspace <commands>  Workspace commands")
-	fmt.Println("  install               Install commands")
-	fmt.Println("  help <command>        Show help for a specific command")
+	fmt.Println("  version         Show current version")
+	fmt.Println("  search          Search for documents matching the query")
+	fmt.Println("  server          Server commands")
+	fmt.Println("  workspace       Workspace commands")
+	fmt.Println("  install         Install commands")
+	fmt.Println("  help <command>  Show help for a specific command")
 }

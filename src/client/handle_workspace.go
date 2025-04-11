@@ -13,11 +13,11 @@ func handleWorkspace(args []string) {
 		fmt.Println("Usage: " + running.ExecutableName() + " workspace <command>")
 		fmt.Println("Commands:")
 		fmt.Println("  list                  List workspaces")
+		fmt.Println("  get <path>            Get a workspace")
 		fmt.Println("  create                Create a new workspace")
-		fmt.Println("  delete                Delete a workspace")
+		fmt.Println("  delete <path>         Delete a workspace")
 		fmt.Println("  sync-all              Sync all workspaces")
-		fmt.Println("  sync <workspace path> Sync a workspace")
-		fmt.Println("  get <workspace path>  Get a workspace")
+		fmt.Println("  sync <path>           Sync a workspace")
 		return
 	}
 
@@ -28,7 +28,7 @@ func handleWorkspace(args []string) {
 	case "create":
 		handleWorkspaceCreate()
 	case "delete":
-		handleWorkspaceDelete()
+		handleWorkspaceDelete(args[1])
 	case "sync-all":
 		handleWorkspaceSyncAll()
 	case "sync":
@@ -37,7 +37,7 @@ func handleWorkspace(args []string) {
 		handleWorkspaceGet(args[1])
 	default:
 		fmt.Printf("Unknown workspace command: %s\n", command)
-		fmt.Println("Available commands: list, create, delete, get")
+		fmt.Println("Available commands: get, list, create, delete, sync, sync-all")
 	}
 }
 
@@ -94,7 +94,7 @@ func handleWorkspaceList() {
 	}
 
 	for _, workspace := range workspaces.Workspaces {
-		printWorkspace(workspace)
+		printWorkspace("", workspace)
 	}
 }
 
@@ -120,11 +120,11 @@ func handleWorkspaceGet(workspacePath string) {
 		return
 	}
 
-	printWorkspace(workspace)
+	printWorkspace("", workspace)
 }
 
-func printWorkspace(workspace types.Workspace) {
-	fmt.Printf(`Workspace %s:
+func printWorkspace(prefix string, workspace types.Workspace) {
+	fmt.Printf(`%s %s:
   Path: %s
   Created at: %s
   Last accessed: %s
@@ -132,7 +132,7 @@ func printWorkspace(workspace types.Workspace) {
   Total files: %d
   Indexing: %t
 `,
-		workspace.ID, workspace.Path, workspace.CreatedAt, workspace.LastAccessed, workspace.LastFullSync,
+		prefix, workspace.ID, workspace.Path, workspace.CreatedAt, workspace.LastAccessed, workspace.LastFullSync,
 		workspace.TotalFiles, workspace.Indexing)
 }
 
@@ -140,6 +140,32 @@ func handleWorkspaceCreate() {
 	fmt.Println("Not implemented yet!")
 }
 
-func handleWorkspaceDelete() {
-	fmt.Println("Not implemented yet!")
+func handleWorkspaceDelete(workspacePath string) {
+	if workspacePath == "" {
+		fmt.Println("Usage: " + running.ExecutableName() + " workspace delete <workspace path>")
+		return
+	}
+
+	request := types.DeleteWorkspaceRequest{
+		Workspace: workspacePath,
+	}
+	requestJson, err := json.Marshal(request)
+	if err != nil {
+		fmt.Printf("Error deleting workspace: %v\n", err)
+		return
+	}
+
+	result, err := serverRequest("/workspace/delete", requestJson)
+	if err != nil {
+		fmt.Printf("Error deleting workspace: %v\n", err)
+		return
+	}
+
+	var response types.Workspace
+	if err := json.Unmarshal(*result.Body.Data, &response); err != nil {
+		fmt.Printf("Error deleting workspace: %v\n", err)
+		return
+	}
+
+	printWorkspace("Deleted", response)
 }

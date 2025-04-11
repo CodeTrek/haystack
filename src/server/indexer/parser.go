@@ -73,11 +73,7 @@ func (p *Parser) processFile(file ParseFile) error {
 
 	writer.Add(file.Workspace, doc, newDoc)
 
-	file.Workspace.Mutex.Lock()
-	if file.Workspace.IndexingStatus != nil {
-		file.Workspace.IndexingStatus.IndexedFiles++
-	}
-	file.Workspace.Mutex.Unlock()
+	file.Workspace.AddIndexingFiles(1)
 
 	return nil
 }

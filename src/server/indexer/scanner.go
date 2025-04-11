@@ -96,13 +96,15 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	startTime := time.Now()
 	lastTime := time.Now()
 	err := fsutils.ListFiles(baseDir, fsutils.ListFileOptions{Filter: exclude}, func(fileInfo fsutils.FileInfo) bool {
+		if w.IsDeleted() {
+			return false
+		}
+
 		if include.Match(fileInfo.Path, false) {
 			parser.Add(w, fileInfo.Path)
 			fileCount++
 
-			w.Mutex.Lock()
-			w.IndexingStatus.TotalFiles++
-			w.Mutex.Unlock()
+			w.AddIndexingTotalFiles(1)
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {
@@ -117,9 +119,15 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 	if err != nil {
 		return err
 	}
+
 	if interrupted {
 		return fmt.Errorf("interrupted")
 	}
+
+	if w.IsDeleted() {
+		return fmt.Errorf("workspace is deleted")
+	}
+
 	return nil
 }
 
@@ -149,17 +157,8 @@ func (s *Scanner) Add(w *workspace.Workspace) error {
 		return fmt.Errorf("cannot add nil workspace to scanner queue")
 	}
 
-	w.Mutex.Lock()
-	defer w.Mutex.Unlock()
-	if w.IndexingStatus != nil {
-		return fmt.Errorf("workspace is indexing")
-	}
-
-	now := time.Now()
-	w.IndexingStatus = &workspace.IndexingStatus{
-		StartedAt:    &now,
-		TotalFiles:   0,
-		IndexedFiles: 0,
+	if err := w.StartIndexing(); err != nil {
+		return err
 	}
 
 	s.mu.Lock()

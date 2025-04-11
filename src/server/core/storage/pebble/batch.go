@@ -36,6 +36,22 @@ func (b *Batch) Delete(key []byte) error {
 	return nil
 }
 
+// DeleteRange deletes a range of keys in the batch
+func (b *Batch) DeleteRange(start, end []byte) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if err := b.batch.DeleteRange(start, end, nil); err != nil {
+		return fmt.Errorf("failed to delete range in batch: %v", err)
+	}
+	return nil
+}
+
+// DeletePrefix deletes all keys with the given prefix in the batch
+func (b *Batch) DeletePrefix(prefix []byte) error {
+	return b.DeleteRange(prefix, append(prefix, 0xFF))
+}
+
 // Commit commits the batch to the database
 func (b *Batch) Commit() error {
 	b.mu.Lock()
