@@ -221,3 +221,20 @@ body {
     padding: 0 1px;
     border-radius: 2px;
 }
+
+/* Loading spinner styles */
+.loading-spinner {
+    border: 4px solid var(--vscode-input-border); /* Use a subtle border color */
+    border-top: 4px solid var(--vscode-progressBar-background); /* Use progress bar color for spinner */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto; /* Center the spinner within the results area */
+}
+
+/* Keyframes for the spin animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

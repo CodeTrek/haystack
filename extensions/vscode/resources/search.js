@@ -1,11 +1,27 @@
 (function() {
     // VS Code API
     const vscode = acquireVsCodeApi();
+    let isSearching = false; // Add a flag to track search status
 
     // Search function
     function performSearch() {
+        // Ignore if a search is already in progress
+        if (isSearching) {
+            return;
+        }
+        isSearching = true; // Set searching flag
+
         const query = document.getElementById('searchInput').value;
-        if (!query) return;
+        if (!query) {
+            isSearching = false; // Reset flag if query is empty
+            return;
+        }
+
+        // Clear previous results and show spinner
+        const container = document.getElementById('searchResults');
+        if (container) {
+            container.innerHTML = '<div class="loading-spinner"></div>';
+        }
 
         const options = {
             caseSensitive: document.getElementById('caseSensitiveBtn').classList.contains('active'),
@@ -22,9 +38,12 @@
 
     // Display results function
     function displayResults(message) {
+        isSearching = false; // Reset searching flag when results are received
+
         const container = document.getElementById('searchResults');
         if (!container) return;
 
+        // Clear the container (remove spinner or previous results)
         container.innerHTML = '';
 
         const results = message.results;
@@ -189,6 +208,7 @@
             displayResults(message);
         } else if (message.type === 'setSearchText') {
             // Handle setting search text from editor selection
+            const searchInput = document.getElementById('searchInput');
             if (searchInput && message.text) {
                 searchInput.value = message.text;
                 // Perform search immediately with the new text
