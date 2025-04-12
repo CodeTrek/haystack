@@ -23,25 +23,6 @@
       "request": "attach",
       "mode": "local",
       "processId": "${command:pickProcess}"
-    },
-    {
-      "type": "extensionHost",
-      "request": "launch",
-      "name": "Haystack VS Code Extension",
-      "cwd": "${workspaceFolder}/extensions/vscode",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensions/vscode",
-        "--disable-extensions",
-        "--disable-workspace-trust"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/extensions/vscode/dist/**/*.js"
-      ],
-      "env": {
-        "IS_DEV": "true",
-        "DEV_WORKSPACE_FOLDER": "${workspaceFolder}/extensions/vscode"
-      }
     }
   ]
 }
