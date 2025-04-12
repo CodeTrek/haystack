@@ -12,6 +12,7 @@ const supportedPlatforms = {
 }
 
 const HAYSTACK_LOCAL_INSTALL_PORT= 13135;
+const HAYSTACK_VERSION = 'v1.0.1';
 
 const haystackConfig= (context: vscode.ExtensionContext) => `
 global:
@@ -33,11 +34,22 @@ const arch = () => {
   return process.arch;
 }
 
+// Get the appropriate host based on the environment
+function getHaystackHost(): string {
+  // If we're in a remote environment, use the remote host
+  if (vscode.env.remoteName) {
+      // In remote environment, we can safely use localhost
+      return 'localhost';
+  }
+
+  // In local environment, prefer 127.0.0.1 for better compatibility
+  return '127.0.0.1';
+}
+
 const currentPlatform = `${platform()}-${arch()}`;
 const isHaystackSupported = supportedPlatforms[currentPlatform as keyof typeof supportedPlatforms] || false;
 const HAYSTACK_DOWNLOAD_URL = 'https://github.com/CodeTrek/haystack/releases/download/';
 const HAYSTACK_DOWNLOAD_URL_FALLBACK = 'https://haystack.codetrek.cn/download/';
-const HAYSTACK_VERSION = 'v1.0.0';
 const HAYSTACK_ZIP_FILE_NAME = `haystack-${currentPlatform}-${HAYSTACK_VERSION}.zip`;
 
 type Status = 'initializing' | 'unsupported' | 'error' |'running';
@@ -50,6 +62,7 @@ export class Haystack {
   private installStatus: InstallStatus;
   private downloadZipPath: string;
   private builtinZipPath: string;
+  private usingLocalServer: boolean;
 
   constructor(private context: vscode.ExtensionContext) {
     // Use globalStorageUri for persistent storage across extension updates
@@ -59,7 +72,14 @@ export class Haystack {
     this.builtinZipPath = path.join(this.context.extensionPath, "pkgs"); // We may have builtin zip files
     this.status = 'initializing';
     this.installStatus = 'checking';
+    this.usingLocalServer = false;
     this.doInit();
+  }
+
+  public getApiUrl(): string {
+    const HAYSTACK_API_URL = `http://${getHaystackHost()}:${HAYSTACK_LOCAL_INSTALL_PORT}/api/v1/global`;
+
+    return HAYSTACK_API_URL;
   }
 
   public getIsSupported(): boolean {
