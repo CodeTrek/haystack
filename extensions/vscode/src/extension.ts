@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SearchViewProvider } from './search/SearchViewProvider';
 import { HaystackProvider } from './search/haystackProvider';
+import { Haystack } from './core/Haystack';
 
 // Constants
 const isDev = () => process.env.VSCODE_DEBUG_MODE === 'true' || process.env.IS_DEV === 'true' || __dirname.includes('.vscode');
@@ -9,30 +10,24 @@ const getStateKey = (key: string) => `${isDev() ? 'dev.' : ''}${key}`;
 // Global state
 let haystackProvider: HaystackProvider | undefined;
 let searchViewProvider: SearchViewProvider | undefined;
-
-const haystackSupportedPlatforms = {
-    "linux-x64": "linux-amd64",
-    "linux-arm64": "linux-arm64",
-    "darwin-x64": "darwin-amd64",
-    "darwin-arm64": "darwin-arm64",
-    "win32-x64": "windows-amd64",
-    "win32-arm64": "windows-arm64",
-}
-
-const currentPlatform = `${process.platform}-${process.arch}`;
-const isHaystackSupported = currentPlatform in haystackSupportedPlatforms;
+let haystack: Haystack | undefined;
 
 /**
  * This function is called when your extension is activated
  */
 export async function activate(context: vscode.ExtensionContext) {
     console.log(`haystack is running in ${isDev() ? 'dev' : 'prod'} mode`);
-    console.log(`haystack is supported on ${currentPlatform}? ${isHaystackSupported ? 'yes' : 'no'}`);
     // Simple activation logging without version checks
     console.log('Haystack extension activated');
 
+    // Initialize Haystack Core Manager and check installation
+    haystack = new Haystack(context);
+    console.log(`haystack is supported on ${haystack.getCurrentPlatform()}? ${haystack.getIsSupported() ? 'yes' : 'no'}`);
+
+    // Pass necessary info to HaystackProvider if needed
+    // Example: haystackProvider = new HaystackProvider(haystackCoreManager.getCorePath());
     haystackProvider = new HaystackProvider();
-    searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider, isHaystackSupported);
+    searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider, haystack.getIsSupported());
 
     // Register search view
     context.subscriptions.push(
@@ -146,6 +141,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 searchViewProvider.dispose();
                 searchViewProvider = undefined;
             }
+            // No explicit dispose needed for HaystackCoreManager currently
+            haystack = undefined;
         }
     });
 }
@@ -159,4 +156,6 @@ export function deactivate() {
         searchViewProvider.dispose();
         searchViewProvider = undefined;
     }
+    // No explicit deactivate needed for HaystackCoreManager currently
+    haystack = undefined;
 }

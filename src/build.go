@@ -10,8 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	fsutils "haystack/utils/fs"
 )
 
 type Target struct {
@@ -87,9 +85,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "❌ Zip failed: %v\n", err)
 		} else {
 			fmt.Printf("✅ Built and zipped: %s\n", zipName)
-			if t.GOOS == "windows" && t.GOARCH == "amd64" {
-				fsutils.CopyFile(zipPath, filepath.Join(extPkgDir, zipName))
-			}
 		}
 
 		_ = os.Remove(binPath) // 删除原始二进制文件
