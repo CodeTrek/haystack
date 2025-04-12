@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('Haystack extension activated');
 
     // Initialize Haystack Core Manager and check installation
-    haystack = new Haystack(context);
+    haystack = new Haystack(context, true);
     console.log(`haystack is supported on ${haystack.getCurrentPlatform()}? ${haystack.getIsSupported() ? 'yes' : 'no'}`);
 
     // Pass necessary info to HaystackProvider if needed

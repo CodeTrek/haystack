@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
+import { exec } from 'child_process';
+import util from 'util';
 
 const supportedPlatforms = {
   "linux-amd64": true,
@@ -58,7 +60,7 @@ const HAYSTACK_DOWNLOAD_URL = 'https://github.com/CodeTrek/haystack/releases/dow
 const HAYSTACK_DOWNLOAD_URL_FALLBACK = 'https://haystack.codetrek.cn/download/';
 const HAYSTACK_ZIP_FILE_NAME = `haystack-${currentPlatform}-${HAYSTACK_VERSION}.zip`;
 
-type Status = 'initializing' | 'unsupported' | 'error' |'running';
+type Status = 'unsupported' | 'error' | 'running' | 'stopped';
 type InstallStatus = 'checking' | 'downloading' | 'unsupported' | 'error' | 'installed' | 'not-installed';
 
 export class Haystack {
@@ -70,15 +72,15 @@ export class Haystack {
   private builtinZipPath: string;
   private runningPort: number;
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(private context: vscode.ExtensionContext, localServer: boolean) {
     // Use globalStorageUri for persistent storage across extension updates
     this.binDir = this.context.globalStorageUri.fsPath;
     this.coreFilePath = path.join(this.binDir, this.getExecutableName());
     this.downloadZipPath = path.join(this.context.globalStorageUri.fsPath, "download");
     this.builtinZipPath = path.join(this.context.extensionPath, "pkgs"); // We may have builtin zip files
-    this.status = 'initializing';
+    this.status = 'stopped';
     this.installStatus = 'checking';
-    this.runningPort = LOCAL_PORT;
+    this.runningPort = localServer ? LOCAL_PORT : GLOBAL_PORT;
     this.doInit();
   }
 
@@ -89,6 +91,10 @@ export class Haystack {
 
     const response = await axios.post(`${this.getUrl()}${uri}`, data);
     return response.data;
+  }
+
+  public isRunningLocally() {
+    return this.runningPort === LOCAL_PORT;
   }
 
   public getUrl(): string {
@@ -111,20 +117,6 @@ export class Haystack {
     return this.installStatus;
   }
 
-  /**
-   * Retrieves the expected full path to the Haystack Core executable.
-   */
-  public getCorePath(): string {
-    return this.coreFilePath;
-  }
-
-    /**
-   * Retrieves the directory where the Haystack Core binary should reside.
-   */
-  public getBinDir(): string {
-    return this.binDir;
-  }
-
   private getExecutableName(): string {
     return platform() === 'windows' ? 'haystack.exe' : 'haystack';
   }
@@ -141,12 +133,10 @@ export class Haystack {
       return;
     }
 
-    try {
-      await this.checkIfHaystackRunning();
+    if (!this.isRunningLocally()) {
+      // Always set status to running if not run local server
       this.status = 'running';
       return;
-    } catch (error) {
-      console.log(`Haystack is not running. Starting Haystack...`);
     }
 
     try {
@@ -162,8 +152,13 @@ export class Haystack {
       this.installStatus = 'not-installed';
     }
 
+    if (this.installStatus === 'installed') {
+      // We have to check if installed or running a compatible version
+      await this.checkIsCompatibleVersion();
+    }
+
     if (this.installStatus === 'not-installed') {
-      await this.install();
+      this.install();
     }
 
     if (this.installStatus !== 'installed') {
@@ -171,60 +166,9 @@ export class Haystack {
       return
     }
 
-    await this.start();
-  }
-
-  private async checkIfHaystackRunning(): Promise<void> {
-    try {
-      // First check global port
-      const globalUrl = `http://${getHaystackHost()}:${GLOBAL_PORT}/health`;
-      const globalResponse = await axios.get(globalUrl);
-      if (globalResponse.status === 200) {
-        const globalVersion = globalResponse.data.version;
-        if (this.isVersionCompatible(globalVersion)) {
-          this.runningPort = GLOBAL_PORT;
-          this.status = 'running';
-          return;
-        }
-      }
-    } catch (error) {
-      // If global port check fails, try local port
-      try {
-        const localUrl = `http://${getHaystackHost()}:${LOCAL_PORT}/health`;
-        const localResponse = await axios.get(localUrl);
-        if (localResponse.status === 200) {
-          const localVersion = localResponse.data.version;
-          if (this.isVersionCompatible(localVersion)) {
-            this.runningPort = LOCAL_PORT;
-            this.status = 'running';
-            return;
-          }
-        }
-      } catch (error) {
-        throw new Error('Haystack is not running on either port');
-      }
+    if (this.status !== 'running') {
+      await this.start();
     }
-    throw new Error('No compatible Haystack version found');
-  }
-
-  private isVersionCompatible(version: string): boolean {
-    // Remove 'v' prefix if exists
-    const currentVersion = version.replace('v', '');
-    const requiredVersion = HAYSTACK_VERSION.replace('v', '');
-
-    const currentParts = currentVersion.split('.').map(Number);
-    const requiredParts = requiredVersion.split('.').map(Number);
-
-    // Compare major, minor, and patch versions
-    for (let i = 0; i < 3; i++) {
-      if (currentParts[i] > requiredParts[i]) {
-        return true;
-      }
-      if (currentParts[i] < requiredParts[i]) {
-        return false;
-      }
-    }
-    return true; // Versions are equal
   }
 
   private async install(): Promise<void> {
@@ -239,6 +183,7 @@ export class Haystack {
         await this.checkExistingZip(downloadedZipPath, true);
         console.log('Found downloaded zip file');
         await this.extractZip(downloadedZipPath);
+        await this.writeVersionAndConf(HAYSTACK_VERSION);
         this.installStatus = 'installed';
         return;
       } catch (error) {
@@ -250,6 +195,7 @@ export class Haystack {
         await this.checkExistingZip(builtinZipFilePath, false);
         console.log('Found builtin zip file');
         await this.extractZip(builtinZipFilePath);
+        await this.writeVersionAndConf(HAYSTACK_VERSION);
         this.installStatus = 'installed';
         return;
       } catch (error) {
@@ -263,6 +209,7 @@ export class Haystack {
         console.log(`Downloading from primary URL: ${primaryUrl}`);
         await this.downloadFile(primaryUrl, downloadedZipPath);
         await this.extractZip(downloadedZipPath);
+        await this.writeVersionAndConf(HAYSTACK_VERSION);
         this.installStatus = 'installed';
         return;
       } catch (error) {
@@ -275,6 +222,7 @@ export class Haystack {
         console.log(`Downloading from fallback URL: ${fallbackUrl}`);
         await this.downloadFile(fallbackUrl, downloadedZipPath);
         await this.extractZip(downloadedZipPath);
+        await this.writeVersionAndConf(HAYSTACK_VERSION);
         this.installStatus = 'installed';
         return;
       } catch (error) {
@@ -383,7 +331,121 @@ export class Haystack {
     });
   }
 
-  private async start(): Promise<void> {
-    this.status = 'running';
+  private async writeVersionAndConf(version: string): Promise<void> {
+    const versionFilePath = path.join(this.binDir, 'version.txt');
+    await fs.promises.writeFile(versionFilePath, version);
+
+    const confFilePath = path.join(this.binDir, 'config.yaml');
+    await fs.promises.writeFile(confFilePath, haystackConfig(this.context));
   }
+
+  private async checkIsCompatibleVersion(): Promise<void> {
+    try {
+      const version = await fs.promises.readFile(path.join(this.binDir, 'version.txt'), 'utf8');
+      if (this.isVersionCompatible(version)) {
+        return
+      }
+      fs.promises.unlink(this.coreFilePath);
+      this.installStatus = 'not-installed';
+      console.log("The installed Haystack is not compatible.");
+      return
+    } catch (error) {
+    }
+
+    // shutdown the Haystack server and try to unlink the core file again
+    await this.shutdown();
+
+    try {
+      fs.promises.unlink(this.coreFilePath);
+      this.installStatus = 'not-installed';
+    } catch (error) {
+      console.error(`Failed to unlink Haystack core file: ${error}`);
+    }
+  }
+
+  private async shutdown(): Promise<void> {
+    try {
+      const url = `${this.getUrl()}/api/v1/server/stop`;
+      console.log("Shutting down Haystack server...");
+      await axios.post(url);
+      await this.waitingForShutdown();
+      this.status = 'stopped';
+      console.log("Haystack server stopped.");
+    } catch (error) {}
+  }
+
+  private async waitingForShutdown(): Promise<void> {
+    const start = Date.now();
+    try {
+      for (;;) {
+        const elapsedSeconds = (Date.now() - start) / 1000;
+        if (elapsedSeconds > 20) {
+          console.log("Haystack server shutdown timeout.");
+          return
+        }
+
+        const url = `${this.getUrl()}/api/v1/server/status`;
+        const response = await axios.get(url);
+        if (response.status !== 200) {
+          return
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    } catch (error) {
+    }
+  }
+
+  private async start(): Promise<void> {
+    // Check if Haystack is running
+    try {
+      const url = `${this.getUrl()}/health`;
+      const response = await axios.get(url);
+      if (response.status === 200) {
+        console.log("Haystack is already running.");
+        this.status = 'running';
+        return;
+      }
+    } catch (error) {
+      console.error(`Failed to start Haystack: ${error}`);
+    }
+
+    const execPromise = util.promisify(exec);
+
+    // run this.coreFilePath server start -d to start the server
+    try {
+      console.log("Starting Haystack server...");
+      const command = `${this.coreFilePath} server start -d`;
+      const result = exec(command);
+      if (result.stderr) {
+        console.log("Haystack start error: ", result.stderr);
+      } else {
+        console.log("Haystack start success: ", result.stdout);
+        this.status = 'running';
+      }
+    } catch (error) {
+      console.error(`Failed to start Haystack: ${error}`);
+    }
+  }
+
+  private isVersionCompatible(version: string): boolean {
+    // Remove 'v' prefix if exists
+    const currentVersion = version.replace('v', '');
+    const requiredVersion = HAYSTACK_VERSION.replace('v', '');
+
+    const currentParts = currentVersion.split('.').map(Number);
+    const requiredParts = requiredVersion.split('.').map(Number);
+
+    // Compare major, minor, and patch versions
+    for (let i = 0; i < 3; i++) {
+      if (currentParts[i] > requiredParts[i]) {
+        return true;
+      }
+      if (currentParts[i] < requiredParts[i]) {
+        return false;
+      }
+    }
+    return true; // Versions are equal
+  }
+
 }
