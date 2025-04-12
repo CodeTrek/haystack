@@ -87,7 +87,7 @@ func main() {
 			fmt.Printf("✅ Built and zipped: %s\n", zipName)
 		}
 
-		_ = os.Remove(binPath) // 删除原始二进制文件
+		_ = os.Remove(binPath)
 	}
 
 	os.WriteFile(filepath.Join(outputDir, "VERSION"), []byte(version), 0644)
