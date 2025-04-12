@@ -4,14 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"haystack/conf"
 	"haystack/shared/types"
 	"io"
 	"net/http"
 	"time"
-)
-
-const (
-	apiBaseURL = "http://127.0.0.1:13134/api/v1"
 )
 
 type result struct {
@@ -25,9 +22,11 @@ func serverRequest(api string, postData []byte) (*result, error) {
 		Timeout: 30 * time.Second,
 	}
 
+	apiURL := fmt.Sprintf("http://127.0.0.1:%d/api/v1%s", conf.Get().Global.Port, api)
+
 	// Send request
 	resp, err := client.Post(
-		apiBaseURL+api,
+		apiURL,
 		"application/json",
 		bytes.NewBuffer(postData),
 	)
