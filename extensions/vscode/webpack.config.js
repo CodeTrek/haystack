@@ -55,14 +55,6 @@ module.exports = {
     ]
   },
   plugins: [
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'resources',
-          to: 'resources'
-        }
-      ]
-    }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(isProd ? 'production' : 'development'),
       'process.env.IS_PROD': JSON.stringify(isProd)

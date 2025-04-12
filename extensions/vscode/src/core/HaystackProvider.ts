@@ -88,6 +88,10 @@ export class HaystackProvider {
     });
   }
 
+  public getHaystack() {
+    return this.haystack;
+  }
+
   private async post(uri: string, data: any) {
     if (!this.haystack || this.haystack.getStatus() !== 'running') {
       throw new Error('Haystack is not running');

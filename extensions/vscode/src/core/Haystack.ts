@@ -14,9 +14,6 @@ const supportedPlatforms = {
   "windows-arm64": true,
 }
 
-// Haystack version
-const HAYSTACK_VERSION = 'v1.0.1';
-
 // Haystack ports
 const LOCAL_PORT= 13135;
 const GLOBAL_PORT= 13134;
@@ -58,7 +55,6 @@ const currentPlatform = `${platform()}-${arch()}`;
 const isHaystackSupported = supportedPlatforms[currentPlatform as keyof typeof supportedPlatforms] || false;
 const HAYSTACK_DOWNLOAD_URL = 'https://github.com/CodeTrek/haystack/releases/download/';
 const HAYSTACK_DOWNLOAD_URL_FALLBACK = 'https://haystack.codetrek.cn/download/';
-const HAYSTACK_ZIP_FILE_NAME = `haystack-${currentPlatform}-${HAYSTACK_VERSION}.zip`;
 
 type Status = 'unsupported' | 'error' | 'running' | 'stopped';
 type InstallStatus = 'checking' | 'downloading' | 'unsupported' | 'error' | 'installed' | 'not-installed';
@@ -71,6 +67,9 @@ export class Haystack {
   private downloadZipPath: string;
   private builtinZipPath: string;
   private runningPort: number;
+  private haystackVersion: string;
+  private HAYSTACK_ZIP_FILE_NAME: string;
+
 
   constructor(private context: vscode.ExtensionContext, localServer: boolean) {
     // Use globalStorageUri for persistent storage across extension updates
@@ -81,6 +80,8 @@ export class Haystack {
     this.status = 'stopped';
     this.installStatus = 'checking';
     this.runningPort = localServer ? LOCAL_PORT : GLOBAL_PORT;
+    this.haystackVersion = "v" + context.extension.packageJSON.haystackVersion;
+    this.HAYSTACK_ZIP_FILE_NAME = `haystack-${currentPlatform}-${this.haystackVersion}.zip`;
     this.doInit();
   }
 
@@ -89,8 +90,9 @@ export class Haystack {
       throw new Error('Haystack is not running');
     }
 
-    const response = await axios.post(`${this.getUrl()}${uri}`, data);
-    return response.data;
+    const url = `${this.getUrl()}${uri}`;
+    const response = await axios.post(url, data);
+    return response;
   }
 
   public isRunningLocally() {
@@ -158,8 +160,10 @@ export class Haystack {
     }
 
     if (this.installStatus === 'not-installed') {
-      this.install();
+      await this.install();
     }
+
+    console.log(`Install status: ${this.installStatus}, status: ${this.status}`);
 
     if (this.installStatus !== 'installed') {
       this.status = 'error';
@@ -175,15 +179,16 @@ export class Haystack {
     try {
       await fs.promises.mkdir(this.downloadZipPath, { recursive: true });
 
-      const downloadedZipPath = path.join(this.downloadZipPath, HAYSTACK_ZIP_FILE_NAME);
-      const builtinZipFilePath = path.join(this.builtinZipPath, HAYSTACK_ZIP_FILE_NAME);
+      const downloadedZipPath = path.join(this.downloadZipPath, this.HAYSTACK_ZIP_FILE_NAME);
+      const builtinZipFilePath = path.join(this.builtinZipPath, this.HAYSTACK_ZIP_FILE_NAME);
 
       // Step 1: Check if zip already exists in download directory
       try {
         await this.checkExistingZip(downloadedZipPath, true);
         console.log('Found downloaded zip file');
         await this.extractZip(downloadedZipPath);
-        await this.writeVersionAndConf(HAYSTACK_VERSION);
+        await this.writeVersionAndConf(this.haystackVersion);
+        console.log(`Installed from downloaded zip file: ${downloadedZipPath}`);
         this.installStatus = 'installed';
         return;
       } catch (error) {
@@ -195,8 +200,9 @@ export class Haystack {
         await this.checkExistingZip(builtinZipFilePath, false);
         console.log('Found builtin zip file');
         await this.extractZip(builtinZipFilePath);
-        await this.writeVersionAndConf(HAYSTACK_VERSION);
+        await this.writeVersionAndConf(this.haystackVersion);
         this.installStatus = 'installed';
+        console.log(`Installed from builtin zip file: ${builtinZipFilePath}`);
         return;
       } catch (error) {
         console.log('No builtin zip file found');
@@ -205,12 +211,13 @@ export class Haystack {
       // Step 3: Try downloading from primary URL
       this.installStatus = 'downloading';
       try {
-        const primaryUrl = `${HAYSTACK_DOWNLOAD_URL}${HAYSTACK_VERSION}/${HAYSTACK_ZIP_FILE_NAME}`;
+        const primaryUrl = `${HAYSTACK_DOWNLOAD_URL}${this.haystackVersion}/${this.HAYSTACK_ZIP_FILE_NAME}`;
         console.log(`Downloading from primary URL: ${primaryUrl}`);
         await this.downloadFile(primaryUrl, downloadedZipPath);
         await this.extractZip(downloadedZipPath);
-        await this.writeVersionAndConf(HAYSTACK_VERSION);
+        await this.writeVersionAndConf(this.haystackVersion);
         this.installStatus = 'installed';
+        console.log(`Downloaded from primary URL: ${primaryUrl}`);
         return;
       } catch (error) {
         console.log(`Failed to download from primary URL: ${error}`);
@@ -218,12 +225,13 @@ export class Haystack {
 
       // Step 4: Try downloading from fallback URL
       try {
-        const fallbackUrl = `${HAYSTACK_DOWNLOAD_URL_FALLBACK}${HAYSTACK_VERSION}/${HAYSTACK_ZIP_FILE_NAME}`;
+        const fallbackUrl = `${HAYSTACK_DOWNLOAD_URL_FALLBACK}${this.haystackVersion}/${this.HAYSTACK_ZIP_FILE_NAME}`;
         console.log(`Downloading from fallback URL: ${fallbackUrl}`);
         await this.downloadFile(fallbackUrl, downloadedZipPath);
         await this.extractZip(downloadedZipPath);
-        await this.writeVersionAndConf(HAYSTACK_VERSION);
+        await this.writeVersionAndConf(this.haystackVersion);
         this.installStatus = 'installed';
+        console.log(`Downloaded from fallback URL: ${fallbackUrl}`);
         return;
       } catch (error) {
         console.log(`Failed to download from fallback URL: ${error}`);
@@ -315,6 +323,7 @@ export class Haystack {
     const AdmZip = require('adm-zip');
     const zip = new AdmZip(zipFilePath);
 
+    console.log(`Extracting zip file: ${zipFilePath}`);
     return new Promise((resolve, reject) => {
       try {
         zip.extractAllTo(this.binDir, true);
@@ -324,8 +333,10 @@ export class Haystack {
           fs.chmodSync(this.coreFilePath, 0o755);
         }
 
+        console.log(`Extracted zip file: ${zipFilePath}`);
         resolve();
       } catch (error) {
+        console.log(`Extraction failed: ${error}`);
         reject(error);
       }
     });
@@ -412,17 +423,13 @@ export class Haystack {
 
     const execPromise = util.promisify(exec);
 
-    // run this.coreFilePath server start -d to start the server
+    // run this.coreFilePath server start to start the server
     try {
       console.log("Starting Haystack server...");
-      const command = `${this.coreFilePath} server start -d`;
+      const command = `${this.coreFilePath} server start`;
       const result = exec(command);
-      if (result.stderr) {
-        console.log("Haystack start error: ", result.stderr);
-      } else {
-        console.log("Haystack start success: ", result.stdout);
-        this.status = 'running';
-      }
+      console.log("Haystack start success: ", result.stdout?.toString() ?? "", result.stderr?.toString() ?? "");
+      this.status = 'running';
     } catch (error) {
       console.error(`Failed to start Haystack: ${error}`);
     }
@@ -431,7 +438,7 @@ export class Haystack {
   private isVersionCompatible(version: string): boolean {
     // Remove 'v' prefix if exists
     const currentVersion = version.replace('v', '');
-    const requiredVersion = HAYSTACK_VERSION.replace('v', '');
+    const requiredVersion = this.haystackVersion.replace('v', '');
 
     const currentParts = currentVersion.split('.').map(Number);
     const requiredParts = requiredVersion.split('.').map(Number);

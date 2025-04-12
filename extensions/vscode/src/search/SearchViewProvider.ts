@@ -110,37 +110,67 @@ export class SearchViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    private async monitorHaystackStatus() {
+        try {
+            if (!this._haystackProvider || !this._haystackProvider.getHaystack()) {
+                this._statusBarItem.text = `$(error) Haystack: (Not installed)`;
+                this._statusBarItem.tooltip = `Haystack is not installed`;
+                this._statusBarItem.show();
+                return;
+            }
+
+            if (this._haystackProvider.getHaystack()?.getStatus() === 'unsupported') {
+                this._statusBarItem.text = `$(error) Haystack: (Unsupported)`;
+                this._statusBarItem.tooltip = `Haystack is not supported on your platform`;
+                this._statusBarItem.show();
+                return;
+            }
+
+            if (this._haystackProvider.getHaystack()?.getStatus() === 'error') {
+                this._statusBarItem.text = `$(error) Haystack: (Error)`;
+                this._statusBarItem.tooltip = `Error active haystack server`;
+                this._statusBarItem.show();
+                return;
+            }
+
+            if (this._haystackProvider.getHaystack()?.getStatus() === 'stopped') {
+                this._statusBarItem.text = `$(error) Haystack: (${this._haystackProvider.getHaystack()?.getInstallStatus()})`;
+                this._statusBarItem.tooltip = `Haystack server is stopped`;
+                this._statusBarItem.show();
+                return;
+            }
+
+            const status = await this._haystackProvider.getWorkspaceStatus();
+            if (status.error) {
+                this._statusBarItem.text = `$(error) Haystack: (Error)`;
+                this._statusBarItem.tooltip = `Error: ${status.error}`;
+                this._statusBarItem.show();
+            } else if (status.indexing) {
+                this._statusBarItem.text = `$(sync~spin) Haystack (indexing)`;
+                this._statusBarItem.tooltip = `Indexing workspace:\n• Indexed: ${status.indexedFiles} files\n• Total: ${status.totalFiles} files\nYou can search now, but the results may not be accurate`;
+                this._statusBarItem.show();
+            } else {
+                this._statusBarItem.text = `$(check) Haystack (Ready)`;
+                this._statusBarItem.tooltip = `Haystack search is ready\n• Total indexed files: ${status.totalFiles}\n• Status: Ready for search`;
+                this._statusBarItem.show();
+            }
+        } catch (error) {
+            console.error(`Failed to update workspace status: ${error}`);
+        }
+    }
+
     private startStatusUpdates() {
         // Clear existing interval if any
         if (this._statusUpdateInterval) {
             clearInterval(this._statusUpdateInterval);
         }
 
+        this.monitorHaystackStatus();
+
         // Set up new interval (3 seconds)
         this._statusUpdateInterval = setInterval(async () => {
-            try {
-                const status = await this._haystackProvider.getWorkspaceStatus();
-                this.updateStatusBar(status);
-            } catch (error) {
-                console.error(`Failed to update workspace status: ${error}`);
-            }
+            await this.monitorHaystackStatus();
         }, 3000);
-    }
-
-    private updateStatusBar(status: any) {
-        if (status.error) {
-            this._statusBarItem.text = `$(error) Haystack: (Error)`;
-            this._statusBarItem.tooltip = `Error: ${status.error}`;
-            this._statusBarItem.show();
-        } else if (status.indexing) {
-            this._statusBarItem.text = `$(sync~spin) Haystack (indexing)`;
-            this._statusBarItem.tooltip = `Indexing workspace:\n• Indexed: ${status.indexedFiles} files\n• Total: ${status.totalFiles} files\nYou can search now, but the results may not be accurate`;
-            this._statusBarItem.show();
-        } else {
-            this._statusBarItem.text = `$(check) Haystack (Ready)`;
-            this._statusBarItem.tooltip = `Haystack search is ready\n• Total indexed files: ${status.totalFiles}\n• Status: Ready for search`;
-            this._statusBarItem.show();
-        }
     }
 
     private stopStatusUpdates() {

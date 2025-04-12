@@ -11,19 +11,15 @@ vscode-haystack-search is a Visual Studio Code extension that leverages Haystack
 ## Installation
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/vscode-haystack-search.git
+   git clone https://github.com/CodeTrek/haystack.git
    ```
 2. Navigate to the project directory:
    ```
-   cd vscode-haystack-search
+   cd haystack/extensions/vscode
    ```
 3. Install the dependencies:
    ```
    npm install
-   ```
-4. Open the project in Visual Studio Code:
-   ```
-   code .
    ```
 
 ## Usage
