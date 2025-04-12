@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import axios from 'axios';
 
 const supportedPlatforms = {
   "linux-amd64": true,
@@ -11,13 +12,18 @@ const supportedPlatforms = {
   "windows-arm64": true,
 }
 
-const HAYSTACK_LOCAL_INSTALL_PORT= 13135;
+// Haystack version
 const HAYSTACK_VERSION = 'v1.0.1';
 
+// Haystack ports
+const LOCAL_PORT= 13135;
+const GLOBAL_PORT= 13134;
+
+// Haystack config
 const haystackConfig= (context: vscode.ExtensionContext) => `
 global:
   data_path: ${path.join(context.globalStorageUri.fsPath, 'data')}
-  port: ${HAYSTACK_LOCAL_INSTALL_PORT}
+  port: ${LOCAL_PORT}
 `
 
 const platform = () => {
@@ -62,7 +68,7 @@ export class Haystack {
   private installStatus: InstallStatus;
   private downloadZipPath: string;
   private builtinZipPath: string;
-  private usingLocalServer: boolean;
+  private runningPort: number;
 
   constructor(private context: vscode.ExtensionContext) {
     // Use globalStorageUri for persistent storage across extension updates
@@ -72,14 +78,21 @@ export class Haystack {
     this.builtinZipPath = path.join(this.context.extensionPath, "pkgs"); // We may have builtin zip files
     this.status = 'initializing';
     this.installStatus = 'checking';
-    this.usingLocalServer = false;
+    this.runningPort = LOCAL_PORT;
     this.doInit();
   }
 
-  public getApiUrl(): string {
-    const HAYSTACK_API_URL = `http://${getHaystackHost()}:${HAYSTACK_LOCAL_INSTALL_PORT}/api/v1/global`;
+  public async post(uri: string, data: any) {
+    if (this.status !== 'running') {
+      throw new Error('Haystack is not running');
+    }
 
-    return HAYSTACK_API_URL;
+    const response = await axios.post(`${this.getUrl()}${uri}`, data);
+    return response.data;
+  }
+
+  public getUrl(): string {
+    return `http://${getHaystackHost()}:${this.runningPort}`;
   }
 
   public getIsSupported(): boolean {
@@ -129,6 +142,14 @@ export class Haystack {
     }
 
     try {
+      await this.checkIfHaystackRunning();
+      this.status = 'running';
+      return;
+    } catch (error) {
+      console.log(`Haystack is not running. Starting Haystack...`);
+    }
+
+    try {
       // Ensure the target directory exists, creating it if necessary.
       await fs.promises.mkdir(this.binDir, { recursive: true });
       // Check for the existence of the core executable file.
@@ -151,6 +172,59 @@ export class Haystack {
     }
 
     await this.start();
+  }
+
+  private async checkIfHaystackRunning(): Promise<void> {
+    try {
+      // First check global port
+      const globalUrl = `http://${getHaystackHost()}:${GLOBAL_PORT}/health`;
+      const globalResponse = await axios.get(globalUrl);
+      if (globalResponse.status === 200) {
+        const globalVersion = globalResponse.data.version;
+        if (this.isVersionCompatible(globalVersion)) {
+          this.runningPort = GLOBAL_PORT;
+          this.status = 'running';
+          return;
+        }
+      }
+    } catch (error) {
+      // If global port check fails, try local port
+      try {
+        const localUrl = `http://${getHaystackHost()}:${LOCAL_PORT}/health`;
+        const localResponse = await axios.get(localUrl);
+        if (localResponse.status === 200) {
+          const localVersion = localResponse.data.version;
+          if (this.isVersionCompatible(localVersion)) {
+            this.runningPort = LOCAL_PORT;
+            this.status = 'running';
+            return;
+          }
+        }
+      } catch (error) {
+        throw new Error('Haystack is not running on either port');
+      }
+    }
+    throw new Error('No compatible Haystack version found');
+  }
+
+  private isVersionCompatible(version: string): boolean {
+    // Remove 'v' prefix if exists
+    const currentVersion = version.replace('v', '');
+    const requiredVersion = HAYSTACK_VERSION.replace('v', '');
+
+    const currentParts = currentVersion.split('.').map(Number);
+    const requiredParts = requiredVersion.split('.').map(Number);
+
+    // Compare major, minor, and patch versions
+    for (let i = 0; i < 3; i++) {
+      if (currentParts[i] > requiredParts[i]) {
+        return true;
+      }
+      if (currentParts[i] < requiredParts[i]) {
+        return false;
+      }
+    }
+    return true; // Versions are equal
   }
 
   private async install(): Promise<void> {
