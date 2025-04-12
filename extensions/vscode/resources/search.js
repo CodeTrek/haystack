@@ -147,11 +147,37 @@
 
     // Search input Enter key handler
     var searchInput = document.getElementById('searchInput');
+    var clearTextBtn = document.getElementById('clearTextBtn');
+
     if (searchInput) {
+        // Handle input changes to show/hide clear button
+        searchInput.addEventListener('input', function() {
+            if (clearTextBtn) {
+                clearTextBtn.style.display = this.value ? 'flex' : 'none';
+            }
+        });
+
         searchInput.onkeydown = function(e) {
             if (e.key === 'Enter' || e.keyCode === 13) {
                 performSearch();
                 return false;
+            }
+        };
+    }
+
+    // Clear text button handler
+    if (clearTextBtn) {
+        clearTextBtn.onclick = function() {
+            if (searchInput) {
+                searchInput.value = '';
+                this.style.display = 'none';
+                // Focus the search input
+                searchInput.focus();
+                // Clear the search results
+                const resultsContainer = document.getElementById('searchResults');
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = '';
+                }
             }
         };
     }
@@ -216,6 +242,13 @@
             type: 'domLoaded'
         });
 
+        // Initialize the clear button state
+        const searchInput = document.getElementById('searchInput');
+        const clearTextBtn = document.getElementById('clearTextBtn');
+        if (searchInput && clearTextBtn) {
+            clearTextBtn.style.display = searchInput.value ? 'flex' : 'none';
+        }
+
         // Auto focus the search input when the DOM loads
         focusSearchInput();
     });
@@ -228,8 +261,13 @@
         } else if (message.type === 'setSearchText') {
             // Handle setting search text from editor selection
             const searchInput = document.getElementById('searchInput');
+            const clearTextBtn = document.getElementById('clearTextBtn');
             if (searchInput && message.text) {
                 searchInput.value = message.text;
+                // Show clear button when text is set
+                if (clearTextBtn) {
+                    clearTextBtn.style.display = message.text ? 'flex' : 'none';
+                }
                 // Perform search immediately with the new text
                 performSearch();
                 focusSearchInput();
@@ -241,11 +279,8 @@
             // Handle visibility change events
             console.log(`WebView visibility changed: ${message.isVisible ? 'visible' : 'hidden'}`);
             if (message.isVisible) {
-                // 当视图变为可见时自动聚焦输入框
                 focusSearchInput();
 
-                // 如果有未完成的搜索或其他状态，可以在这里恢复
-                // 例如：如果有搜索内容且结果区域为空，可以重新执行搜索
                 const searchInput = document.getElementById('searchInput');
                 const resultsContainer = document.getElementById('searchResults');
                 if (searchInput && searchInput.value.trim() && resultsContainer && !resultsContainer.hasChildNodes()) {

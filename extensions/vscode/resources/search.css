@@ -73,6 +73,17 @@ body {
     opacity: 0.9;
 }
 
+/* Clear button styles */
+.clear-button {
+    right: 48px; /* Position it to the left of the case sensitive button */
+    font-size: 10px;
+}
+
+/* Adjust case sensitive button position */
+#caseSensitiveBtn {
+    right: 24px;
+}
+
 .search-options-toggle {
     position: absolute;
     right: 6px;
