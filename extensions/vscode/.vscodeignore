@@ -39,6 +39,7 @@ CHANGELOG.md
 CONTRIBUTING.md
 .prettierrc
 .editorconfig
+./convert-svg-to-png.js
 
 # Only keep compiled dist directory and necessary resource files
 # dist/** - already included in package.json files field

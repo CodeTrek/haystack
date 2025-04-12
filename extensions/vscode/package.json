@@ -2,10 +2,12 @@
   "name": "haystack-search",
   "displayName": "Haystack Search",
   "description": "A VS Code extension that integrates Haystack for advanced file search capabilities.",
-  "version": "0.0.2",
-  "publisher": "jianjunchen",
-  "repository": "https://github.com/codetrek/haystack",
+  "version": "0.0.4",
+  "publisher": "codetrek",
+  "haystackVersion": "1.0.2",
+  "repository": "https://github.com/CodeTrek/haystack",
   "license": "MIT",
+  "icon": "resources/icon.png",
   "author": {
     "name": "Jianjun Chen",
     "email": "sychenjianjun@gmail.com"
@@ -92,6 +94,8 @@
     }
   },
   "dependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "adm-zip": "^0.5.16",
     "axios": "^1.6.7"
   },
   "devDependencies": {

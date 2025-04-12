@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SearchViewProvider } from './search/SearchViewProvider';
-import { HaystackProvider } from './search/haystackProvider';
+import { HaystackProvider } from './core/HaystackProvider';
 import { Haystack } from './core/Haystack';
 
 // Constants
@@ -21,12 +21,12 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('Haystack extension activated');
 
     // Initialize Haystack Core Manager and check installation
-    haystack = new Haystack(context);
+    haystack = new Haystack(context, true);
     console.log(`haystack is supported on ${haystack.getCurrentPlatform()}? ${haystack.getIsSupported() ? 'yes' : 'no'}`);
 
     // Pass necessary info to HaystackProvider if needed
     // Example: haystackProvider = new HaystackProvider(haystackCoreManager.getCorePath());
-    haystackProvider = new HaystackProvider();
+    haystackProvider = new HaystackProvider(haystack);
     searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider, haystack.getIsSupported());
 
     // Register search view
