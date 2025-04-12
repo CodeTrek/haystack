@@ -201,6 +201,25 @@
         };
     }
 
+    var focusSearchInput = () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select(); // Also select the text for easy replacement
+        }
+    }
+
+    // DOM Content Loaded event handler
+    document.addEventListener('DOMContentLoaded', function() {
+        // Notify VS Code that the DOM has been loaded
+        vscode.postMessage({
+            type: 'domLoaded'
+        });
+
+        // Auto focus the search input when the DOM loads
+        focusSearchInput();
+    });
+
     // Message handler
     window.addEventListener('message', function(event) {
         var message = event.data;
@@ -213,6 +232,25 @@
                 searchInput.value = message.text;
                 // Perform search immediately with the new text
                 performSearch();
+                focusSearchInput();
+            }
+        } else if (message.type === 'focusSearchInput') {
+            // Handle focusing the search input
+            focusSearchInput();
+        } else if (message.type === 'visibilityChanged') {
+            // Handle visibility change events
+            console.log(`WebView visibility changed: ${message.isVisible ? 'visible' : 'hidden'}`);
+            if (message.isVisible) {
+                // 当视图变为可见时自动聚焦输入框
+                focusSearchInput();
+
+                // 如果有未完成的搜索或其他状态，可以在这里恢复
+                // 例如：如果有搜索内容且结果区域为空，可以重新执行搜索
+                const searchInput = document.getElementById('searchInput');
+                const resultsContainer = document.getElementById('searchResults');
+                if (searchInput && searchInput.value.trim() && resultsContainer && !resultsContainer.hasChildNodes()) {
+                    performSearch();
+                }
             }
         }
     });

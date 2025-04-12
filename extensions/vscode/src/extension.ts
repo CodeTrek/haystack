@@ -67,17 +67,21 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             }
 
-            // Ensure search view is visible but keep focus in the editor
-            if (searchViewProvider) {
-                searchViewProvider.revealView(true);
-            }
-
             // Perform search if we found text and the provider exists
             if (searchText && searchViewProvider) {
                 searchViewProvider.searchText(searchText);
             }
             // If no text was found (no selection, no word at cursor),
             // the view is already focused, so nothing more to do.
+        })
+    );
+
+    // Register command to focus the search input
+    context.subscriptions.push(
+        vscode.commands.registerCommand('haystack.focusSearchInput', () => {
+            if (searchViewProvider) {
+                searchViewProvider.focusSearchInput();
+            }
         })
     );
 
