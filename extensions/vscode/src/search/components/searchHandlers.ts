@@ -79,14 +79,12 @@ export class SearchHandlers {
   handleVisibilityChange(webview: vscode.Webview, isVisible: boolean) {
     console.log(`Search view visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
 
-    // 发送可见性变化消息到WebView
     webview.postMessage({
       type: 'visibilityChanged',
       isVisible: isVisible
     });
 
     if (isVisible) {
-      // 当视图变为可见时，焦点到搜索输入框
       this.handleFocusSearchInput(webview);
     }
   }
