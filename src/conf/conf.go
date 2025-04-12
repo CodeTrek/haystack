@@ -31,7 +31,7 @@ var (
 	DefaultInclude = []string{"*.cc", "*.c", "*.hpp", "*.cpp", "*.h", "*.md", "*.js", "*.ts", "*.txt", "*.mm", "*.java",
 		"*.cs", "*.py", "*.kt", "*.go", "*.rb", "*.php", "*.html", "*.css", "*.yaml", "*.yml", "*.toml", "*.xml", "*.sql",
 		"*.sh", "Makefile", "*.bat", "*.ps1", "*.sln", "*.json", "*.vcxproj", "*.vcproj", "*.vcxproj.filters"}
-	DefaultExclude = []string{"node_modules/", "dist/", "build/", "out/", "obj/", "log/", "logs/", ".*", "*.log",
+	DefaultExclude = []string{"node_modules/", "dist/", "build/", "vendor/", "out/", "obj/", "log/", "logs/", ".*", "*.log",
 		"*.log.*", "*log.txt"}
 )
 
