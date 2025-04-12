@@ -146,7 +146,7 @@ func Load() error {
 	}
 
 	if conf.Global.DataPath == "" {
-		conf.Global.DataPath = running.UserHomeDir()
+		conf.Global.DataPath = filepath.Join(running.UserHomeDir(), ".haystack")
 	}
 
 	if err := os.Mkdir(conf.Global.DataPath, 0755); err != nil {

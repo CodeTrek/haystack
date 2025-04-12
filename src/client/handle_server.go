@@ -119,7 +119,8 @@ func handleServerStatus() {
   Version: %s
   Is shutting down: %t
   Is restarting: %t
-	`, status.PID, status.Version, status.ShuttingDown, status.Restarting)
+  Data path: %s
+	`, status.PID, status.Version, status.ShuttingDown, status.Restarting, status.DataPath)
 }
 
 func handleServerStart() {

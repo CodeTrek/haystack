@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"haystack/conf"
 	"haystack/shared/running"
 	"haystack/shared/types"
 	"log"
@@ -14,14 +15,14 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	type HealthResponse struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-
-	response := HealthResponse{
+	response := types.HealthResponse{
 		Code:    0,
 		Message: "healthy",
+		Data: types.HealthInfo{
+			DataPath: conf.Get().Global.DataPath,
+			PID:      os.Getpid(),
+			Version:  running.Version(),
+		},
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -98,6 +99,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 			Restarting:   running.IsRestart(),
 			PID:          os.Getpid(),
 			Version:      running.Version(),
+			DataPath:     conf.Get().Global.DataPath,
 		},
 	}
 

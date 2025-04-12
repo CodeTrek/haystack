@@ -13,4 +13,17 @@ type ServerStatus struct {
 	Restarting   bool   `json:"restarting"`
 	PID          int    `json:"pid"`
 	Version      string `json:"version"`
+	DataPath     string `json:"data_path"`
+}
+
+type HealthInfo struct {
+	DataPath string `json:"data_path"`
+	PID      int    `json:"pid"`
+	Version  string `json:"version"`
+}
+
+type HealthResponse struct {
+	Code    int        `json:"code"`
+	Message string     `json:"message"`
+	Data    HealthInfo `json:"data"`
 }
