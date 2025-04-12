@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { HaystackProvider } from './haystackProvider';
+import { HaystackProvider } from '../core/HaystackProvider';
 import { getSearchTemplate } from './components/searchTemplate';
 import { SearchHandlers } from './components/searchHandlers';
 import { SearchContentResult, SearchMessage } from '../types/search';

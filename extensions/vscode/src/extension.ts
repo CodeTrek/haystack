@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SearchViewProvider } from './search/SearchViewProvider';
-import { HaystackProvider } from './search/haystackProvider';
+import { HaystackProvider } from './core/HaystackProvider';
 import { Haystack } from './core/Haystack';
 
 // Constants
@@ -26,7 +26,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Pass necessary info to HaystackProvider if needed
     // Example: haystackProvider = new HaystackProvider(haystackCoreManager.getCorePath());
-    haystackProvider = new HaystackProvider();
+    haystackProvider = new HaystackProvider(haystack);
     searchViewProvider = new SearchViewProvider(context.extensionUri, haystackProvider, haystack.getIsSupported());
 
     // Register search view

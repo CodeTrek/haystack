@@ -5,6 +5,7 @@ import {
     SearchContentResponse,
     SearchContentResult
 } from '../types/search';
+import { Haystack } from './Haystack';
 
 // Get the appropriate host based on the environment
 function getHaystackHost(): string {
@@ -31,14 +32,15 @@ export class HaystackProvider {
     private updateTimeouts: Map<string, NodeJS.Timeout>;
     private periodicTaskInterval: NodeJS.Timeout | null;
     private statusUpdateInterval: NodeJS.Timeout | null;
+    private haystack: Haystack | null;
 
-    constructor() {
+    constructor(haystack: Haystack | null) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         this.workspaceRoot = workspaceFolders ? workspaceFolders[0].uri.fsPath : '';
         this.updateTimeouts = new Map();
         this.periodicTaskInterval = null;
         this.statusUpdateInterval = null;
-
+        this.haystack = haystack;
         // Start periodic workspace creation task
         this.startPeriodicTask();
 
@@ -251,46 +253,45 @@ export class HaystackProvider {
                             indexing: false,
                             totalFiles: 0,
                             indexedFiles: 0,
-                            error: `Failed to automatically create workspace: ${errorMessage}`
+                            error: `Failed to create workspace: ${errorMessage}`
                         };
                     }
                 }
-            } else if (response.data.code !== 0) {
-                // Handle other non-success codes
-                console.error(`Haystack: Failed to get workspace status for '${this.workspaceRoot}': ${response.data.message}`);
+            } else if (response.data.code === 0) {
+                // Successfully fetched status
+                const statusData = response.data.data;
+                return {
+                    indexing: statusData.indexing || false,
+                    totalFiles: statusData.total_files || 0,
+                    indexedFiles: statusData.indexed_files || 0
+                };
+            } else {
+                // Handle other non-zero error codes
+                console.error(`Haystack: Error getting workspace status for '${this.workspaceRoot}': ${response.data.message || 'Unknown error'}`);
                 return {
                     indexing: false,
                     totalFiles: 0,
                     indexedFiles: 0,
-                    error: response.data.message || 'Failed to get workspace status'
+                    error: `Error fetching workspace status: ${response.data.message || 'Unknown error'}`
                 };
             }
-
-            // Code is 0, workspace exists, process data
-            if (!response.data.data) {
-                 console.error(`Haystack: Workspace data missing in response for '${this.workspaceRoot}'.`);
-                return {
-                    indexing: false,
-                    totalFiles: 0,
-                    indexedFiles: 0,
-                    error: 'Workspace data missing in response' // Or handle as not found?
-                };
-            }
-
-            const data = response.data.data;
-            return {
-                indexing: data.indexing || false,
-                totalFiles: data.total_files || 0,
-                // Assuming backend adds indexed_files when indexing is true
-                indexedFiles: data.indexed_files || 0
-            };
         } catch (error: any) {
-             console.error(`Haystack: Failed to connect or get workspace status for '${this.workspaceRoot}': ${error.message || error}`);
+            const errorMessage = error.response?.data?.message || error.message || String(error);
+            if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Failed to connect')) {
+                console.error(`Haystack: Failed to connect to Haystack server at ${HAYSTACK_URL}. Ensure it's running.`);
+                return {
+                    indexing: false,
+                    totalFiles: 0,
+                    indexedFiles: 0,
+                    error: 'Haystack server is not running or unreachable.'
+                };
+            }
+            console.error(`Haystack: Unexpected error getting workspace status for '${this.workspaceRoot}': ${errorMessage}`);
             return {
                 indexing: false,
                 totalFiles: 0,
                 indexedFiles: 0,
-                error: `Failed to get workspace status: ${error.message || error}`
+                error: `Unexpected error fetching status: ${errorMessage}`
             };
         }
     }
@@ -319,15 +320,15 @@ export class HaystackProvider {
             clearInterval(this.statusUpdateInterval);
         }
 
-        // Set up new interval (3 seconds)
-        this.statusUpdateInterval = setInterval(async () => {
-            try {
-                const status = await this.getWorkspaceStatus();
-                callback(status);
-            } catch (error) {
-                console.error(`Failed to update workspace status: ${error}`);
-            }
-        }, 3000);
+        // Define the update function
+        const updateStatus = async () => {
+            const status = await this.getWorkspaceStatus();
+            callback(status);
+        };
+
+        // Call immediately and then set interval
+        updateStatus();
+        this.statusUpdateInterval = setInterval(updateStatus, 5000); // Update every 5 seconds
     }
 
     stopStatusUpdates() {
@@ -338,22 +339,13 @@ export class HaystackProvider {
     }
 
     dispose() {
-        // Clear all timeouts
-        for (const timeout of this.updateTimeouts.values()) {
-            clearTimeout(timeout);
-        }
+        // Clear timeouts and intervals
+        this.updateTimeouts.forEach((timeout) => clearTimeout(timeout));
         this.updateTimeouts.clear();
-
-        // Clear periodic task
         if (this.periodicTaskInterval) {
             clearInterval(this.periodicTaskInterval);
             this.periodicTaskInterval = null;
         }
-
-        // Clear status update interval
-        if (this.statusUpdateInterval) {
-            clearInterval(this.statusUpdateInterval);
-            this.statusUpdateInterval = null;
-        }
+        this.stopStatusUpdates();
     }
 }

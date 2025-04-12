@@ -1,13 +1,13 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { HaystackProvider } from '../../search/haystackProvider';
+import { HaystackProvider } from '../../core/HaystackProvider';
 
 export function runTests() {
     suite('Haystack Search Tests', () => {
         let haystackProvider: HaystackProvider;
 
         setup(() => {
-            haystackProvider = new HaystackProvider();
+            haystackProvider = new HaystackProvider(null);
         });
 
         test('should return search results for a valid query', async () => {
