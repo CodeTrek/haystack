@@ -40,7 +40,7 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = indexer.CreateWorkspace(request.Workspace)
+	ws, err = indexer.CreateWorkspace(request.Workspace)
 	if err != nil {
 		log.Printf("Create workspace `%s`: failed to get or create: %v", request.Workspace, err)
 		json.NewEncoder(w).Encode(types.CommonResponse{
@@ -51,9 +51,17 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Created workspace `%s`", request.Workspace)
-	json.NewEncoder(w).Encode(types.CommonResponse{
+	json.NewEncoder(w).Encode(types.CreateWorkspaceResponse{
 		Code:    0,
 		Message: "Ok",
+		Data: types.Workspace{
+			ID:           ws.ID,
+			Path:         ws.Path,
+			CreatedAt:    ws.CreatedAt,
+			LastAccessed: ws.LastAccessed,
+			LastFullSync: ws.LastFullSync,
+			Indexing:     true,
+		},
 	})
 }
 

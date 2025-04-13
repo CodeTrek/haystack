@@ -14,7 +14,7 @@ func handleWorkspace(args []string) {
 		fmt.Println("Commands:")
 		fmt.Println("  list                  List workspaces")
 		fmt.Println("  get <path>            Get a workspace")
-		fmt.Println("  create                Create a new workspace")
+		fmt.Println("  create <path>         Create a new workspace")
 		fmt.Println("  delete <path>         Delete a workspace")
 		fmt.Println("  sync-all              Sync all workspaces")
 		fmt.Println("  sync <path>           Sync a workspace")
@@ -26,7 +26,7 @@ func handleWorkspace(args []string) {
 	case "list":
 		handleWorkspaceList()
 	case "create":
-		handleWorkspaceCreate()
+		handleWorkspaceCreate(args[1])
 	case "delete":
 		handleWorkspaceDelete(args[1])
 	case "sync-all":
@@ -136,8 +136,39 @@ func printWorkspace(prefix string, workspace types.Workspace) {
 		workspace.TotalFiles, workspace.Indexing)
 }
 
-func handleWorkspaceCreate() {
-	fmt.Println("Not implemented yet!")
+func handleWorkspaceCreate(workspacePath string) {
+	if workspacePath == "" {
+		fmt.Println("Usage: " + running.ExecutableName() + " workspace delete <workspace path>")
+		return
+	}
+	if !filepath.IsAbs(workspacePath) {
+		fmt.Println("Workspace path must be absolute")
+		return
+	}
+
+	request := types.CreateWorkspaceRequest{
+		Workspace: workspacePath,
+	}
+
+	requestJson, err := json.Marshal(request)
+	if err != nil {
+		fmt.Printf("Error creating workspace: %v\n", err)
+		return
+	}
+
+	result, err := serverRequest("/workspace/create", requestJson)
+	if err != nil {
+		fmt.Printf("Error creating workspace: %v\n", err)
+		return
+	}
+
+	var response types.Workspace
+	if err := json.Unmarshal(*result.Body.Data, &response); err != nil {
+		fmt.Printf("Error creating workspace: %v\n", err)
+		return
+	}
+
+	printWorkspace("Created workspace", response)
 }
 
 func handleWorkspaceDelete(workspacePath string) {

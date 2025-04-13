@@ -23,6 +23,12 @@ type CreateWorkspaceRequest struct {
 	Workspace string `json:"workspace"`
 }
 
+type CreateWorkspaceResponse struct {
+	Code    int       `json:"code"`
+	Message string    `json:"message"`
+	Data    Workspace `json:"data"`
+}
+
 type DeleteWorkspaceRequest struct {
 	Workspace string `json:"workspace"`
 }

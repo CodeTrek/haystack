@@ -38,7 +38,7 @@ func StartServer(wg *sync.WaitGroup, addr string) {
 
 	http.HandleFunc("/api/v1/search/content", handleSearchContent)
 
-	mcpInit(server)
+	mcpInit()
 
 	// Start server in a goroutine
 	go func() {
