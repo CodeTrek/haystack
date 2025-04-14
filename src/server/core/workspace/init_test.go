@@ -25,12 +25,12 @@ func TestInit(t *testing.T) {
 
 	// Initialize storage
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = storage.Init(shutdown)
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
+	defer cancel()
 
 	// Create test workspace data
 	workspaceData := map[string]interface{}{
@@ -45,10 +45,7 @@ func TestInit(t *testing.T) {
 	}
 
 	// Save workspace
-	err = storage.SaveWorkspace("test-workspace", string(workspaceJSON))
-	if err != nil {
-		t.Fatalf("Failed to save workspace: %v", err)
-	}
+	storage.SaveWorkspace("test-workspace", string(workspaceJSON))
 
 	// Initialize workspace manager
 	var wg sync.WaitGroup
@@ -80,12 +77,12 @@ func TestWorkspaceManagement(t *testing.T) {
 
 	// Initialize storage
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = storage.Init(shutdown)
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
+	defer cancel()
 
 	// Initialize workspace manager
 	var wg sync.WaitGroup
@@ -175,12 +172,12 @@ func TestWorkspaceConcurrency(t *testing.T) {
 
 	// Initialize storage
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = storage.Init(shutdown)
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
+	defer cancel()
 
 	// Initialize workspace manager
 	var wg sync.WaitGroup

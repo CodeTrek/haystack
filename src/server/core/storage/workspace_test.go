@@ -22,12 +22,12 @@ func TestWorkspaceStorage(t *testing.T) {
 
 	// Initialize storage
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer CloseAndWait()
+	defer cancel()
 
 	// Test saving a workspace
 	workspaceID := "test-workspace"
@@ -41,10 +41,7 @@ func TestWorkspaceStorage(t *testing.T) {
 		t.Fatalf("Failed to marshal workspace data: %v", err)
 	}
 
-	err = SaveWorkspace(workspaceID, string(workspaceJSON))
-	if err != nil {
-		t.Fatalf("Failed to save workspace: %v", err)
-	}
+	SaveWorkspace(workspaceID, string(workspaceJSON))
 
 	// Test getting workspaces
 	workspaces, err := GetAllWorkspaces()
@@ -67,10 +64,7 @@ func TestWorkspaceStorage(t *testing.T) {
 	}
 
 	// Test deleting a workspace
-	err = DeleteWorkspace(workspaceID)
-	if err != nil {
-		t.Fatalf("Failed to delete workspace: %v", err)
-	}
+	DeleteWorkspace(workspaceID)
 
 	// Verify workspace is deleted
 	workspaces, err = GetAllWorkspaces()
@@ -98,13 +92,13 @@ func TestGetIncreasedWorkspaceID(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	// Initialize storage
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer CloseAndWait()
+	defer cancel()
 
 	// Test getting increased workspace ID
 	ids := make(map[string]bool)

@@ -3,8 +3,7 @@ package pebble
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cockroachdb/pebble"
@@ -15,8 +14,7 @@ import (
 type DB struct {
 	path   string
 	db     *pebble.DB
-	closed bool
-	mutex  sync.RWMutex
+	closed atomic.Bool
 }
 
 // OpenDB opens a Pebble database at the specified path
@@ -62,22 +60,20 @@ func OpenDB(path string) (*DB, error) {
 	pdb := &DB{
 		path:   absPath,
 		db:     db,
-		closed: false,
+		closed: atomic.Bool{},
 	}
+	pdb.closed.Store(false)
 
 	return pdb, nil
 }
 
 // Close closes the database
 func (d *DB) Close() error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if d.closed {
+	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
 
-	d.closed = true
+	d.closed.Store(true)
 
 	if d.db != nil {
 		if err := d.db.Close(); err != nil {
@@ -89,17 +85,12 @@ func (d *DB) Close() error {
 }
 
 func (d *DB) IsClosed() bool {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-	return d.closed
+	return d.closed.Load()
 }
 
 // Put stores a key-value pair
 func (d *DB) Put(key, value []byte) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if d.closed {
+	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
 
@@ -112,10 +103,7 @@ func (d *DB) Put(key, value []byte) error {
 
 // Get retrieves the value for a key
 func (d *DB) Get(key []byte) ([]byte, error) {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-
-	if d.closed {
+	if d.IsClosed() {
 		return nil, fmt.Errorf("database is closed")
 	}
 
@@ -135,10 +123,7 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 
 // Delete removes a key-value pair
 func (d *DB) Delete(key []byte) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if d.closed {
+	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
 
@@ -158,11 +143,11 @@ func (d *DB) Batch() *Batch {
 }
 
 // Scan performs a range scan over the database
+// key and value will INVALIDATE after the callback
+// so make sure to copy them if you need to use them later
+// The callback should return true to continue scanning or false to stop
 func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-
-	if d.closed {
+	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
 
@@ -177,15 +162,46 @@ func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	defer iter.Close()
 
 	for iter.First(); iter.Valid(); iter.Next() {
-		if !strings.HasPrefix(string(iter.Key()), string(prefix)) {
+		// We're not going to copy silently for performance reasons.
+		// It's user's responsibility to copy the key and value if they need to use them later.
+		//
+		// key := append([]byte{}, iter.Key()...)
+		// value := append([]byte{}, iter.Value()...)
+
+		if continueScan := cb(iter.Key(), iter.Value()); !continueScan {
 			break
 		}
+	}
+	return nil
+}
 
-		// Make copies of key and value since they may be invalidated
-		key := append([]byte{}, iter.Key()...)
-		value := append([]byte{}, iter.Value()...)
+// Scan performs a range scan over the database
+// key and value will INVALIDATE after the callback
+// so make sure to copy them if you need to use them later
+// The callback should return true to continue scanning or false to stop
+func (d *DB) ScanRange(begin []byte, end []byte, cb func(key, value []byte) bool) error {
+	if d.IsClosed() {
+		return fmt.Errorf("database is closed")
+	}
 
-		if continueScan := cb(key, value); !continueScan {
+	// Create an iterator with the prefix
+	iter, err := d.db.NewIter(&pebble.IterOptions{
+		LowerBound: begin,
+		UpperBound: end,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create iterator: %v", err)
+	}
+	defer iter.Close()
+
+	for iter.First(); iter.Valid(); iter.Next() {
+		// We're not going to copy silently for performance reasons.
+		// It's user's responsibility to copy the key and value if they need to use them later.
+		//
+		// key := append([]byte{}, ...)
+		// value := append([]byte{}, ...)
+
+		if continueScan := cb(iter.Key(), iter.Value()); !continueScan {
 			break
 		}
 	}

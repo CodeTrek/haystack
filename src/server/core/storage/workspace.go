@@ -46,15 +46,57 @@ func GetWorkspace(id string) (string, error) {
 }
 
 func SaveWorkspace(id string, workspaceJson string) error {
-	return db.Put(EncodeWorkspaceKey(id), []byte(workspaceJson))
+	task := &saveWorkspaceTask{
+		WorkspaceID: id,
+		Workspace:   workspaceJson,
+		done:        make(chan error),
+	}
+
+	writeQueue <- task
+	return task.Wait()
 }
 
 // DeleteWorkspace deletes a workspace and all of its documents and keywords
 func DeleteWorkspace(id string) error {
+	task := &deleteWorkspaceTask{
+		WorkspaceID: id,
+		done:        make(chan error),
+	}
+
+	writeQueue <- task
+	return task.Wait()
+}
+
+type saveWorkspaceTask struct {
+	WorkspaceID string
+	Workspace   string
+	done        chan error
+}
+
+func (t *saveWorkspaceTask) Run() {
+	t.done <- db.Put(EncodeWorkspaceKey(t.WorkspaceID), []byte(t.Workspace))
+}
+
+func (t *saveWorkspaceTask) Wait() error {
+	defer close(t.done)
+	return <-t.done
+}
+
+type deleteWorkspaceTask struct {
+	WorkspaceID string
+	done        chan error
+}
+
+func (t *deleteWorkspaceTask) Run() {
 	batch := db.Batch()
-	batch.Delete(EncodeWorkspaceKey(id))
-	batch.DeletePrefix(EncodeDocumentMetaKey(id, ""))
-	batch.DeletePrefix(EncodeDocumentWordsKey(id, ""))
-	batch.DeletePrefix(EncodeKeywordIndexKeyPrefix(id, ""))
-	return batch.Commit()
+	batch.Delete(EncodeWorkspaceKey(t.WorkspaceID))
+	batch.DeletePrefix(EncodeDocumentMetaKey(t.WorkspaceID, ""))
+	batch.DeletePrefix(EncodeDocumentWordsKey(t.WorkspaceID, ""))
+	batch.DeletePrefix(EncodeKeywordIndexKeyPrefix(t.WorkspaceID, ""))
+	t.done <- batch.Commit()
+}
+
+func (t *deleteWorkspaceTask) Wait() error {
+	defer close(t.done)
+	return <-t.done
 }

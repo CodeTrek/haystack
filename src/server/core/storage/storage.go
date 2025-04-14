@@ -11,13 +11,43 @@ import (
 	"time"
 )
 
-var db *pebble.DB
-
 const StorageVersion = "1.0"
 
-var closeOnce *sync.Once
+var (
+	db             *pebble.DB
+	closeOnce      *sync.Once
+	writeQueue     chan WriteTask
+	closeStorage   context.CancelFunc
+	keywordsMerger *KeywordsMerger
+)
 
-func Init(shutdown context.Context) error {
+type WriteTask interface {
+	Run()
+}
+
+type closeWriteQueue struct {
+	done chan struct{}
+}
+
+func (c *closeWriteQueue) Run() {
+	close(writeQueue)
+
+	// flush pending writes
+	t := &flushPendingWritesTask{
+		closing: true,
+	}
+	t.Run()
+
+	c.done <- struct{}{}
+}
+
+func (c *closeWriteQueue) Wait() {
+	<-c.done
+}
+
+func Init(_ context.Context) error {
+	var ctxCloseDB context.Context
+	ctxCloseDB, closeStorage = context.WithCancel(context.Background())
 	closeOnce = &sync.Once{}
 
 	homePath := conf.Get().Global.DataPath
@@ -37,26 +67,52 @@ func Init(shutdown context.Context) error {
 		return err
 	}
 
+	writeQueue = make(chan WriteTask)
+
+	go func() {
+		for {
+			task, ok := <-writeQueue
+			if !ok {
+				log.Println("Database write queue closed")
+				break
+			}
+			task.Run()
+		}
+	}()
+
 	go func() {
 		timer := time.NewTicker(1 * time.Second)
 		defer timer.Stop()
 
 		for {
 			select {
-			case <-shutdown.Done():
+			case <-ctxCloseDB.Done():
 				return
 			case <-timer.C:
-				flushPendingWrites(false)
+				writeQueue <- &flushPendingWritesTask{
+					closing: false,
+				}
 			}
 		}
 	}()
+
+	keywordsMerger = &KeywordsMerger{}
+	keywordsMerger.Start()
 
 	return nil
 }
 
 func CloseAndWait() {
 	closeOnce.Do(func() {
-		flushPendingWrites(true)
+		closeStorage()
+		keywordsMerger.Shutdown()
+		keywordsMerger.Wait()
+
+		closeWriteQueue := &closeWriteQueue{
+			done: make(chan struct{}),
+		}
+		writeQueue <- closeWriteQueue
+		closeWriteQueue.Wait()
 
 		log.Println("Closing storage...")
 		defer log.Println("Storage closed.")
