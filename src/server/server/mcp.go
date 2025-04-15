@@ -21,6 +21,7 @@ type ToolName string
 
 const (
 	HaystackSearch ToolName = "HaystackSearch"
+	HaystackFiles  ToolName = "HaystackFiles"
 )
 
 // mcpInit initializes and sets up the Model Context Protocol (MCP) server
@@ -83,6 +84,24 @@ func registerMCPTools(mcpServer *server.MCPServer) {
 				fmt.Sprintf("Currently, the default limit is %d, and the maximum limit is %d.\n",
 					config.Client.DefaultLimit.MaxResults, config.Server.Search.Limit.MaxResults))),
 	), handleSearch)
+
+	mcpServer.AddTool(mcp.NewTool(string(HaystackFiles),
+		mcp.WithDescription("Search for files in the Haystack index. The search engine supports fuzzy matching"+
+			" on filenames and attempts to return a list of the most relevant files"),
+		mcp.WithString("query",
+			mcp.Description("The search query which is case-insensitive. Fuzzy match\n"+
+				"e.g. query 'savedtabgroup' will match 'saved_tab_group', 'src/**/saved/tabgroup'"),
+			mcp.Required(),
+		),
+		mcp.WithString("workspace",
+			mcp.Description("The workspace to search in, normally it's the absolute path to the project directory, "+
+				"e.g. /home/user/projects/project1. Please always passing current workspace path."),
+			mcp.Required(),
+		),
+		mcp.WithNumber("limit",
+			mcp.Description("Maximum number of results to return. \n"+
+				fmt.Sprintf("Currently, the default limit is %d.\n", config.Client.DefaultLimit.MaxFilesResults))),
+	), searchFilesToolHandler)
 
 	log.Println("MCP tools registered")
 }
@@ -177,5 +196,67 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 		})
 	}
 
+	return tr, nil
+}
+
+func searchFilesToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	arguments := request.Params.Arguments
+	query, ok1 := arguments["query"].(string)
+	workspacePath, ok2 := arguments["workspace"].(string)
+	limitCount, ok3 := arguments["limit"].(float64)
+	if !ok1 || !ok2 {
+		return nil, fmt.Errorf("invalid arguments")
+	}
+
+	workspacePath = utils.NormalizePath(workspacePath)
+	if !filepath.IsAbs(workspacePath) {
+		return nil, fmt.Errorf("workspace is not absolute")
+	}
+
+	workspace, err := workspace.GetByPath(workspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workspace: %v", err)
+	}
+
+	limit := conf.Get().Client.DefaultLimit.MaxFilesResults
+	if ok3 {
+		limit = int(limitCount)
+	}
+
+	if limit > conf.Get().Server.Search.Limit.MaxFilesResults {
+		limit = conf.Get().Server.Search.Limit.MaxFilesResults
+	}
+
+	req := types.SearchFilesRequest{
+		Query:     query,
+		Workspace: workspacePath,
+		Limit:     limit,
+	}
+
+	result, err := searcher.SearchFiles(workspace, &req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search files: %v", err)
+	}
+
+	tr := &mcp.CallToolResult{}
+	tr.Content = append(tr.Content, mcp.TextContent{
+		Type: "text",
+		Text: fmt.Sprintf("Found %d files.", len(result.Files)),
+	})
+
+	if len(result.Files) == 0 {
+		tr.Content = append(tr.Content, mcp.TextContent{
+			Type: "text",
+			Text: "No results found.",
+		})
+		return tr, nil
+	}
+
+	for _, file := range result.Files {
+		tr.Content = append(tr.Content, mcp.TextContent{
+			Type: "text",
+			Text: file,
+		})
+	}
 	return tr, nil
 }

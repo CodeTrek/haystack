@@ -3,6 +3,7 @@ package types
 type SearchLimit struct {
 	MaxResults        int `yaml:"max_results" json:"max_results,omitempty"`
 	MaxResultsPerFile int `yaml:"max_results_per_file" json:"max_results_per_file,omitempty"`
+	MaxFilesResults   int `yaml:"max_files_results" json:"max_files_results,omitempty"`
 }
 
 type SearchFilters struct {
@@ -28,6 +29,12 @@ type SearchContentRequest struct {
 	CaseSensitive bool           `json:"case_sensitive,omitempty"`
 	Filters       *SearchFilters `json:"filters,omitempty"`
 	Limit         *SearchLimit   `json:"limit,omitempty"`
+}
+
+type SearchFilesRequest struct {
+	Workspace string `json:"workspace,omitempty"`
+	Query     string `json:"query,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
 }
 
 type LineMatch struct {
@@ -57,4 +64,15 @@ type SearchContentResponse struct {
 	Code    int                  `json:"code"`
 	Message string               `json:"message"`
 	Data    SearchContentResults `json:"data,omitempty"`
+}
+
+type SearchFilesResult struct {
+	Query string   `json:"query"`
+	Files []string `json:"results,omitempty"`
+}
+
+type SearchFilesResponse struct {
+	Code    int               `json:"code"`
+	Message string            `json:"message"`
+	Data    SearchFilesResult `json:"data,omitempty"`
 }

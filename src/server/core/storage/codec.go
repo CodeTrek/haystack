@@ -9,12 +9,11 @@ import (
 )
 
 const (
-	DocWordsPrefix     = "dw:"
-	DocPathWordsPrefix = "dp:"
-	DocMetaPrefix      = "dm:"
-	WorkspacePrefix    = "ws:"
-	KeywordPrefix      = "kw:"
-	PathWordsPrefix    = "pw:"
+	DocWordsPrefix  = "dw:"
+	DocMetaPrefix   = "dm:"
+	DocPathPrefix   = "dp:"
+	WorkspacePrefix = "ws:"
+	KeywordPrefix   = "kw:"
 )
 
 func EncodeWorkspaceKey(workspaceid string) []byte {
@@ -29,6 +28,10 @@ func DecodeWorkspaceKey(key string) string {
 	key = strings.TrimPrefix(key, WorkspacePrefix)
 
 	return key
+}
+
+func EncodeDocumentPathKey(workspaceid string, docid string) []byte {
+	return []byte(fmt.Sprintf("%s%s|%s", DocPathPrefix, workspaceid, docid))
 }
 
 func EncodeDocumentMetaKey(workspaceid string, docid string) []byte {
@@ -46,24 +49,6 @@ func DecodeDocumentMetaValue(data []byte) (*Document, error) {
 	}
 
 	return &doc, nil
-}
-
-func DecodeDocumentMetaKey(key string) (string, string) {
-	if !strings.HasPrefix(key, DocMetaPrefix) {
-		return "", ""
-	}
-
-	key = strings.TrimPrefix(key, DocMetaPrefix)
-
-	parts := strings.Split(key, "|")
-	if len(parts) != 2 {
-		return "", ""
-	}
-
-	workspaceid := parts[0]
-	docid := parts[1]
-
-	return workspaceid, docid
 }
 
 func EncodeDocumentWordsKey(workspaceid string, docid string) []byte {

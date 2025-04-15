@@ -12,9 +12,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 func Run(wg *sync.WaitGroup) {
@@ -191,4 +194,171 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	}
 
 	return finalResults, totalHits >= limit.MaxResults
+}
+
+// fuzzyMatchWithScore checks if pattern matches text and returns a score (0-100)
+// Higher score means better match
+func fuzzyMatchWithScore(pattern, text string) (bool, int) {
+	// For exact matches, return perfect score
+	if strings.Contains(strings.ToLower(text), strings.ToLower(pattern)) {
+		return true, 100
+	}
+
+	// Check if the text is a path and extract filename (part after last '/')
+	isFilePath := false
+	filename := text
+	if strings.Contains(text, "/") || strings.Contains(text, "\\") {
+		parts := strings.Split(strings.ReplaceAll(text, "\\", "/"), "/")
+		filename = parts[len(parts)-1]
+		isFilePath = true
+	}
+
+	// For fuzzy matches, calculate a score
+	patLower := strings.ToLower(pattern)
+	textLower := strings.ToLower(text)
+
+	patLen := len(patLower)
+	textLen := len(textLower)
+
+	// Find pattern character positions in text
+	positions := make([]int, 0, patLen)
+	lastPos := 0
+
+	for _, pc := range patLower {
+		found := false
+		for i := lastPos; i < textLen; i++ {
+			if rune(textLower[i]) == pc {
+				positions = append(positions, i)
+				lastPos = i + 1
+				found = true
+				break
+			}
+		}
+		if !found {
+			// Should never happen as we confirmed Match already
+			return true, 50
+		}
+	}
+
+	// Calculate consecutive matches
+	consecutive := 0
+	for i := 0; i < len(positions)-1; i++ {
+		if positions[i+1] == positions[i]+1 {
+			consecutive++
+		}
+	}
+
+	// Calculate gaps between matches
+	totalGap := 0
+	if len(positions) > 1 {
+		for i := 0; i < len(positions)-1; i++ {
+			totalGap += positions[i+1] - positions[i] - 1
+		}
+	}
+
+	// Calculate match density (how close are the matches to each other)
+	matchSpan := positions[len(positions)-1] - positions[0] + 1
+	density := float64(patLen) / float64(matchSpan)
+
+	// Calculate the final score based on several factors
+	// 1. How much of the pattern is matched (always 100% for fuzzy.Match)
+	// 2. How much of the text is matched (ratio of pattern to text)
+	// 3. How many consecutive characters are matched
+	// 4. How dense the matches are (fewer gaps is better)
+
+	textRatio := float64(patLen) / float64(textLen) * 25              // Max 25 points
+	consecutiveRatio := float64(consecutive) / float64(patLen-1) * 25 // Max 25 points
+	densityScore := density * 30                                      // Max 30 points
+
+	// Position bonus - matches at start of text or after delimiters are better
+	positionBonus := 0
+	if positions[0] <= 2 { // Match near the start
+		positionBonus = 25
+	} else {
+		// Check if match starts after a common delimiter
+		delimiters := []rune{'_', '-', ' ', '.', '/', '\\'}
+		for _, d := range delimiters {
+			if positions[0] > 0 && rune(textLower[positions[0]-1]) == d {
+				positionBonus = 15
+				break
+			}
+		}
+	}
+
+	// Calculate filename match bonus
+	filenameBonus := 0
+	if isFilePath && fuzzy.Match(pattern, filename) {
+		// If the pattern matches the filename, add a significant bonus
+		_, filenameScore := fuzzyMatchWithScore(pattern, filename)
+		// Scale the filename score to give it more weight
+		filenameBonus = filenameScore * 4 / 5
+	}
+
+	// Calculate final score (max 100)
+	score := int(textRatio+consecutiveRatio+densityScore) + positionBonus + filenameBonus
+	if score > 100 {
+		score = 100
+	}
+
+	return true, score
+}
+
+func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) (types.SearchFilesResult, error) {
+	type MatchResult struct {
+		relPath string
+		Score   int
+	}
+
+	startTime := time.Now()
+	var isTimeout = func() bool {
+		return time.Since(startTime) > 10*time.Second
+	}
+
+	pattern := strings.ReplaceAll(req.Query, " ", "")
+	matches := []MatchResult{}
+	storage.ScanFiles(workspace.ID, func(relPath string) bool {
+		if isTimeout() {
+			return false
+		}
+
+		if !fuzzy.Match(pattern, relPath) {
+			return true
+		}
+
+		matched, score := fuzzyMatchWithScore(pattern, relPath)
+		if matched {
+			matches = append(matches, MatchResult{
+				relPath: relPath,
+				Score:   score,
+			})
+		}
+		return true
+	})
+
+	// Sort matches by score (highest first)
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].Score == matches[j].Score {
+			return len(matches[i].relPath) < len(matches[j].relPath)
+		} else {
+			return matches[i].Score > matches[j].Score
+		}
+	})
+
+	result := types.SearchFilesResult{
+		Query: req.Query,
+		Files: []string{},
+	}
+
+	// Filter and display only matches with score > 50
+	for _, match := range matches {
+		if match.Score > 50 {
+			result.Files = append(result.Files, match.relPath)
+		}
+
+		if len(result.Files) >= req.Limit {
+			break
+		}
+	}
+
+	return result, nil
 }

@@ -25,7 +25,7 @@ func Init(shutdown context.Context) error {
 
 	log.Printf("Init storage path: %s", storagePath)
 
-	dbPath := filepath.Join(storagePath, "index")
+	dbPath := filepath.Join(storagePath, StorageVersion)
 	versionPath := filepath.Join(storagePath, "version")
 
 	os.MkdirAll(storagePath, 0755)
