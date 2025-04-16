@@ -99,7 +99,8 @@ func (w *Workspace) Save() error {
 		return err
 	}
 
-	return storage.SaveWorkspace(w.ID, string(json))
+	storage.SaveWorkspace(w.ID, string(json))
+	return nil
 }
 
 func (w *Workspace) UpdateLastFullSync() {

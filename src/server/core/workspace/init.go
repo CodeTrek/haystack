@@ -208,5 +208,6 @@ func Delete(workspaceId string) error {
 	delete(workspaces, workspaceId)
 	delete(workspacePaths, workspace.Path)
 
-	return storage.DeleteWorkspace(workspaceId)
+	storage.DeleteWorkspace(workspaceId)
+	return nil
 }

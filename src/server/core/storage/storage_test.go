@@ -22,7 +22,6 @@ func TestInit(t *testing.T) {
 
 	// Test initialization
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -49,6 +48,7 @@ func TestInit(t *testing.T) {
 		t.Error("Database was not initialized")
 	}
 
+	cancel()
 	// Cleanup
 	CloseAndWait()
 }
@@ -66,7 +66,6 @@ func TestCloseAndWait(t *testing.T) {
 
 	// Initialize
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -75,6 +74,7 @@ func TestCloseAndWait(t *testing.T) {
 	// Test closing
 	done := make(chan struct{})
 	go func() {
+		cancel()
 		CloseAndWait()
 		close(done)
 	}()
@@ -106,12 +106,12 @@ func TestCloseAndWaitMultipleCalls(t *testing.T) {
 
 	// Initialize
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 
+	cancel()
 	// Call CloseAndWait multiple times
 	for i := 0; i < 3; i++ {
 		CloseAndWait()

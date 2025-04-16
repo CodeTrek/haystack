@@ -7,6 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/cockroachdb/pebble v1.1.4
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gofrs/flock v0.12.1
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/mark3labs/mcp-go v0.20.0

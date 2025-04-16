@@ -19,13 +19,13 @@ func TestCodec(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	shutdown, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	// Initialize storage
 	err = Init(shutdown)
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer CloseAndWait()
+	defer cancel()
 
 	// Test encoding and decoding
 	testCases := []struct {
