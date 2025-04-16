@@ -124,6 +124,10 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 	if !fileSizeExceedLimit {
 		// We only index the content if the file size is below the limit
 		words = parseString(string(content))
+	} else {
+		// If the file is too large, we delete from the index
+		storage.DeleteDocument(file.Workspace.ID, id)
+		return nil, false, nil
 	}
 
 	return &storage.Document{
