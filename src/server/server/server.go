@@ -37,6 +37,7 @@ func StartServer(wg *sync.WaitGroup, addr string) {
 	http.HandleFunc("/api/v1/workspace/sync", handleSyncWorkspace)
 
 	http.HandleFunc("/api/v1/search/content", handleSearchContent)
+	http.HandleFunc("/api/v1/search/files", handleSearchFiles)
 
 	mcpInit()
 

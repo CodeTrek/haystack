@@ -19,9 +19,11 @@ const (
 
 	DefaultMaxResults        = 5000
 	DefaultMaxResultsPerFile = 500
+	DefaultMaxFiles          = 1000
 
 	DefaultClientMaxResults        = 500
 	DefaultClientMaxResultsPerFile = 50
+	DefaultClientMaxFileResults    = 100
 
 	DefaultMaxSearchWildcardLength  = 24
 	DefaultMaxSearchKeywordDistance = 32
@@ -89,6 +91,7 @@ var conf = &Conf{
 		DefaultLimit: types.SearchLimit{
 			MaxResults:        DefaultClientMaxResults,
 			MaxResultsPerFile: DefaultClientMaxResultsPerFile,
+			MaxFilesResults:   DefaultClientMaxFileResults,
 		},
 	},
 	Server: Server{
@@ -107,6 +110,7 @@ var conf = &Conf{
 			Limit: types.SearchLimit{
 				MaxResults:        DefaultMaxResults,
 				MaxResultsPerFile: DefaultMaxResultsPerFile,
+				MaxFilesResults:   DefaultMaxFiles,
 			},
 		},
 	},
@@ -177,6 +181,11 @@ func Load() error {
 		conf.Server.Search.Limit.MaxResultsPerFile = DefaultMaxResultsPerFile
 	}
 
+	if conf.Server.Search.Limit.MaxFilesResults <= 0 ||
+		conf.Server.Search.Limit.MaxFilesResults > DefaultMaxFiles {
+		conf.Server.Search.Limit.MaxFilesResults = DefaultMaxFiles
+	}
+
 	if conf.Server.Search.MaxWildcardLength <= 0 ||
 		conf.Server.Search.MaxWildcardLength > 64 { // 64 is the maximum length of a wildcard
 		conf.Server.Search.MaxWildcardLength = DefaultMaxSearchWildcardLength
@@ -195,6 +204,11 @@ func Load() error {
 	if conf.Client.DefaultLimit.MaxResultsPerFile <= 0 ||
 		conf.Client.DefaultLimit.MaxResultsPerFile > conf.Server.Search.Limit.MaxResultsPerFile {
 		conf.Client.DefaultLimit.MaxResultsPerFile = DefaultClientMaxResultsPerFile
+	}
+
+	if conf.Client.DefaultLimit.MaxFilesResults <= 0 ||
+		conf.Client.DefaultLimit.MaxFilesResults > DefaultMaxFiles {
+		conf.Client.DefaultLimit.MaxFilesResults = DefaultMaxFiles
 	}
 
 	return nil

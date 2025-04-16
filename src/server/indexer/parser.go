@@ -103,7 +103,6 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 	id := GetDocumentId(fullPath)
 
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
-
 	// If the document exists and the modified time is the same, return nil
 	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() {
 		return nil, false, nil
@@ -129,6 +128,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	return &storage.Document{
 		ID:           id,
+		RelPath:      file.FilePath,
 		FullPath:     fullPath,
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),

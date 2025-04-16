@@ -12,6 +12,7 @@ import (
 
 type Document struct {
 	ID           string `json:"-"`
+	RelPath      string `json:"rel_path"`
 	FullPath     string `json:"full_path"`
 	Size         int64  `json:"size"`
 	Hash         string `json:"hash"`
@@ -157,6 +158,7 @@ func saveDocument(batch *pebble.Batch, workspaceid string, doc *Document) {
 	// Save the document meta and words
 	batch.Put(EncodeDocumentMetaKey(workspaceid, doc.ID), meta)
 	batch.Put(EncodeDocumentWordsKey(workspaceid, doc.ID), EncodeKeywordIndexValue(doc.Words))
+	batch.Put(EncodeDocumentPathKey(workspaceid, doc.ID), []byte(doc.RelPath))
 }
 
 // updateKeywordIndexCached updates the keyword index in write cached
@@ -191,6 +193,8 @@ func GetDocument(workspaceid string, docid string, includeWords bool) (*Document
 	if err != nil {
 		return nil, err
 	}
+
+	doc.ID = docid
 
 	if includeWords {
 		words, err := GetDocumentWords(workspaceid, docid)
@@ -326,6 +330,7 @@ func DeleteDocument(workspaceid string, docid string) error {
 	// delete the document meta and words
 	batch.Delete(EncodeDocumentMetaKey(workspaceid, docid))
 	batch.Delete(EncodeDocumentWordsKey(workspaceid, docid))
+	batch.Delete(EncodeDocumentPathKey(workspaceid, docid))
 
 	return batch.Commit()
 }

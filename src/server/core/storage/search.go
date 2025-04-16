@@ -45,3 +45,9 @@ func Search(workspaceid string, query string, limit int) SearchResult {
 	})
 	return results
 }
+
+func ScanFiles(workspaceId string, callback func(relPath string) bool) {
+	db.Scan(EncodeDocumentPathKey(workspaceId, ""), func(_, value []byte) bool {
+		return callback(string(value))
+	})
+}

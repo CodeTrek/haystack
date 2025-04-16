@@ -13,7 +13,7 @@ import (
 
 var db *pebble.DB
 
-const StorageVersion = "1.0"
+const StorageVersion = "1.2.0"
 
 var closeOnce *sync.Once
 
@@ -25,7 +25,7 @@ func Init(shutdown context.Context) error {
 
 	log.Printf("Init storage path: %s", storagePath)
 
-	dbPath := filepath.Join(storagePath, "index")
+	dbPath := filepath.Join(storagePath, StorageVersion)
 	versionPath := filepath.Join(storagePath, "version")
 
 	os.MkdirAll(storagePath, 0755)
