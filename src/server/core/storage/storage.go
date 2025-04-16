@@ -13,7 +13,7 @@ import (
 
 var db *pebble.DB
 
-const StorageVersion = "1.2.0"
+const StorageVersion = "1.0"
 
 var closeOnce *sync.Once
 
