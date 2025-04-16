@@ -17,11 +17,12 @@ type KeywordsMerger struct {
 }
 
 type Merging struct {
-	Start           time.Time
-	NextIter        string
-	TotalKeywords   int
-	TotalRowsBefore int
-	TotalRowsAfter  int
+	Start                time.Time
+	WaitingForFlushCache bool
+	NextIter             string
+	TotalKeywords        int
+	TotalRowsBefore      int
+	TotalRowsAfter       int
 }
 
 type mergeKeywordTask struct {
@@ -63,14 +64,21 @@ func (km *KeywordsMerger) run() {
 
 		writeQueue <- m
 		km.merging = m.Wait()
-		log.Printf("Keywords merger: merged %s keywords, %s -> %s rows, -%s rows, cost %s",
-			humanize.Comma(int64(km.merging.TotalKeywords)),
-			humanize.Comma(int64(km.merging.TotalRowsBefore)),
-			humanize.Comma(int64(km.merging.TotalRowsAfter)),
-			humanize.Comma(int64(km.merging.TotalRowsBefore-km.merging.TotalRowsAfter)),
-			time.Since(km.merging.Start))
+		if !km.merging.WaitingForFlushCache {
+			// we've reached the end of the database
+			log.Printf("Keywords merger: merged %s keywords, %s -> %s rows, -%s rows, cost %s",
+				humanize.Comma(int64(km.merging.TotalKeywords)),
+				humanize.Comma(int64(km.merging.TotalRowsBefore)),
+				humanize.Comma(int64(km.merging.TotalRowsAfter)),
+				humanize.Comma(int64(km.merging.TotalRowsBefore-km.merging.TotalRowsAfter)),
+				time.Since(km.merging.Start))
+		}
 
 		delayTime := 1 * time.Second
+		if km.merging.WaitingForFlushCache {
+			delayTime = 5 * time.Second
+		}
+
 		if km.merging.NextIter == "" {
 			log.Printf("Keywords merge done, total keywords: %s", humanize.Comma(int64(km.merging.TotalKeywords)))
 			// we've reached the end of the database
@@ -102,10 +110,11 @@ func (m *mergeKeywordTask) Run() {
 		// There are pending writes, wo we need to wait
 		// for them to be flushed before merging
 		// the keywords index
+		m.merging.WaitingForFlushCache = true
 		m.done <- m.merging
 		return
 	}
-
+	m.merging.WaitingForFlushCache = false
 	m.done <- mergeKeywordsIndex(m.merging)
 }
 
@@ -172,7 +181,7 @@ func mergeKeywordsIndex(m Merging) Merging {
 
 	now := time.Now()
 	var isTimeout = func() bool {
-		return time.Since(now) > 100*time.Millisecond
+		return time.Since(now) > 200*time.Millisecond
 	}
 
 	interrupted := false
