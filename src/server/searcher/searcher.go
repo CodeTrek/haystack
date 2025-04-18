@@ -26,7 +26,7 @@ func Run(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer log.Println("Searcher shutdown.")
+		defer log.Println("Searcher shutdown")
 		running.WaitingForShutdown()
 	}()
 }

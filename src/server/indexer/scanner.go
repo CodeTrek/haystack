@@ -101,10 +101,12 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 		}
 
 		if include.Match(fileInfo.Path, false) {
-			parser.Add(w, fileInfo.Path)
+			parser.Add(w, fileInfo.Path, true)
 			fileCount++
 
 			w.AddIndexingTotalFiles(1)
+		} else {
+			parser.Add(w, fileInfo.Path, false)
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {

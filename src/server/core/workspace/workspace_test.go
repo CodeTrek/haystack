@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"haystack/conf"
+	"haystack/shared/types"
 	"os"
 	"reflect"
 	"sync"
@@ -122,9 +123,9 @@ func TestWorkspaceFilters(t *testing.T) {
 		ID:               "test-workspace",
 		Path:             "/test/path",
 		UseGlobalFilters: false,
-		Filters: &conf.Filters{
+		Filters: &types.Filters{
 			Include: []string{"*.go"},
-			Exclude: conf.Exclude{Customized: []string{"*.test"}},
+			Exclude: types.Exclude{Customized: []string{"*.test"}},
 		},
 	}
 

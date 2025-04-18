@@ -20,6 +20,7 @@ import (
 type ParseFile struct {
 	Workspace *workspace.Workspace
 	FilePath  string
+	Included  bool
 }
 
 // Parser handles concurrent file parsing operations
@@ -79,16 +80,18 @@ func (p *Parser) processFile(file ParseFile) error {
 }
 
 // Add queues a file for parsing
-func (p *Parser) Add(workspace *workspace.Workspace, relPath string) {
+func (p *Parser) Add(workspace *workspace.Workspace, relPath string, included bool) {
 	p.ch <- ParseFile{
 		Workspace: workspace,
 		FilePath:  relPath,
+		Included:  included,
 	}
 }
 
 // parse reads and processes a file, returning a Document
 func parse(file ParseFile) (*storage.Document, bool, error) {
 	fullPath := filepath.Join(file.Workspace.Path, file.FilePath)
+	id := GetDocumentId(fullPath)
 
 	info, err := os.Stat(fullPath)
 	if err != nil {
@@ -100,20 +103,15 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		log.Printf("File %s (%.2f MiB) is too large to index, skipping", file.FilePath, float64(info.Size())/1024/1024)
 	}
 
-	id := GetDocumentId(fullPath)
-
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
 	// If the document exists and the modified time is the same, return nil
-	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() {
+	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() && existing.Included == file.Included {
 		return nil, false, nil
 	}
 
 	var hash string
 	var words []string
-	if fileSizeExceedLimit {
-		if existing == nil {
-			return nil, false, nil
-		}
+	if !file.Included || fileSizeExceedLimit {
 		hash = ""
 		words = []string{}
 	} else {
@@ -139,6 +137,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),
 		LastSyncTime: time.Now().UnixNano(),
+		Included:     file.Included,
 		Hash:         hash,
 		Words:        words,
 		PathWords:    parseString(file.FilePath),

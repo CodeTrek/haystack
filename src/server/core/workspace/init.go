@@ -86,13 +86,15 @@ func GetAll() []types.Workspace {
 		}
 
 		result = append(result, types.Workspace{
-			ID:           workspace.ID,
-			Path:         workspace.Path,
-			CreatedAt:    workspace.CreatedAt,
-			TotalFiles:   totalFiles,
-			LastAccessed: workspace.LastAccessed,
-			LastFullSync: workspace.LastFullSync,
-			Indexing:     workspace.indexingStatus != nil,
+			ID:               workspace.ID,
+			Path:             workspace.Path,
+			CreatedAt:        workspace.CreatedAt,
+			TotalFiles:       totalFiles,
+			UseGlobalFilters: workspace.UseGlobalFilters,
+			Filters:          workspace.Filters,
+			LastAccessed:     workspace.LastAccessed,
+			LastFullSync:     workspace.LastFullSync,
+			Indexing:         workspace.indexingStatus != nil,
 		})
 
 		workspace.mutex.Unlock()
