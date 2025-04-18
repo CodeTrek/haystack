@@ -113,7 +113,7 @@ func writeKeywordIndexCached(workspaceid string, keyword string, docids []string
 }
 
 // writeKeywordIndex writes a keyword to the database
-func writeKeywordIndex(batch *BatchWrite, workspaceid string, kw string, docids []string, key []byte) {
+func writeKeywordIndex(batch BatchWrite, workspaceid string, kw string, docids []string, key []byte) {
 	content := EncodeKeywordIndexValue(docids)
 	if len(key) == 0 {
 		key = EncodeKeywordIndexKey(workspaceid, kw, len(docids))
@@ -123,7 +123,7 @@ func writeKeywordIndex(batch *BatchWrite, workspaceid string, kw string, docids 
 
 // removeDocumentFromKeywordsIndex removes a document from the keywords index
 // It will remove the document from the keywords index and rewrite the keyword with new docids
-func removeDocumentFromKeywordsIndex(batch *BatchWrite, workspaceid string, kw string, removingDocid string) {
+func removeDocumentFromKeywordsIndex(batch BatchWrite, workspaceid string, kw string, removingDocid string) {
 	if len(kw) == 0 {
 		log.Println("Warning: removing document from keywords index, but keyword is empty")
 		return
@@ -164,7 +164,7 @@ func removeDocumentFromKeywordsIndex(batch *BatchWrite, workspaceid string, kw s
 }
 
 // saveDocument saves a document to the database
-func saveDocument(batch *BatchWrite, workspaceid string, doc *Document) {
+func saveDocument(batch BatchWrite, workspaceid string, doc *Document) {
 	doc.LastSyncTime = time.Now().UnixNano()
 	meta, err := EncodeDocumentMetaValue(doc)
 	if err != nil {

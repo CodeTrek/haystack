@@ -9,25 +9,31 @@ import (
 var putCount = atomic.Int64{}
 var deleteCount = atomic.Int64{}
 
-func NewBatchWrite(db *pebble.DB) *BatchWrite {
+type BatchWrite interface {
+	Put(key, value []byte) error
+	Delete(key []byte) error
+	Commit() error
+}
+
+func NewBatchWrite(db *pebble.DB) BatchWrite {
 	batch := db.Batch()
 	if batch == nil {
 		return nil
 	}
 
-	return &BatchWrite{
+	return &BatchWriteImpl{
 		batch: batch,
 		count: atomic.Int32{},
 	}
 }
 
-type BatchWrite struct {
+type BatchWriteImpl struct {
 	batch *pebble.Batch
 	count atomic.Int32
 }
 
 // Put adds a key-value pair to the batch
-func (b *BatchWrite) Put(key, value []byte) error {
+func (b *BatchWriteImpl) Put(key, value []byte) error {
 	putCount.Add(1)
 
 	if err := b.batch.Put(key, value); err != nil {
@@ -37,7 +43,7 @@ func (b *BatchWrite) Put(key, value []byte) error {
 }
 
 // Delete adds a delete operation to the batch
-func (b *BatchWrite) Delete(key []byte) error {
+func (b *BatchWriteImpl) Delete(key []byte) error {
 	deleteCount.Add(1)
 
 	if err := b.batch.Delete(key); err != nil {
@@ -48,7 +54,7 @@ func (b *BatchWrite) Delete(key []byte) error {
 }
 
 // Commit commits the batch to the database
-func (b *BatchWrite) Commit() error {
+func (b *BatchWriteImpl) Commit() error {
 	if b.count.Load() == 0 {
 		return nil
 	}
@@ -59,7 +65,7 @@ func (b *BatchWrite) Commit() error {
 	return nil
 }
 
-func (b *BatchWrite) increaseAndTryCommit() error {
+func (b *BatchWriteImpl) increaseAndTryCommit() error {
 	b.count.Add(1)
 	if b.count.Load() >= 512 {
 		err := b.batch.Commit()

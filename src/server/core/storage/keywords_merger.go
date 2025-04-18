@@ -145,7 +145,7 @@ type InvertedIndex struct {
 	DocCount    int
 }
 
-func rewriteIndex(batch *BatchWrite, index *InvertedIndex) int {
+func rewriteIndex(batch BatchWrite, index *InvertedIndex) int {
 	if len(index.Rows) < 2 ||
 		index.DocCount/len(index.Rows) > MaxKeywordIndexSize {
 		// We've already have a well batched keyword
