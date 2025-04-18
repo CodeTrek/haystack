@@ -7,6 +7,7 @@ import (
 	"haystack/server"
 	"haystack/shared/running"
 	"log"
+	_ "net/http/pprof"
 	"path/filepath"
 )
 

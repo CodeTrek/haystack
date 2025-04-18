@@ -113,7 +113,7 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 	arguments := request.Params.Arguments
 	query, ok1 := arguments["query"].(string)
 	workspacePath, ok2 := arguments["workspace"].(string)
-	limit, _ := arguments["limit"].(int)
+	limit, _ := arguments["limit"].(float64)
 	path, _ := arguments["path"].(string)
 	filter, _ := arguments["filter"].(string)
 	exclude, _ := arguments["exclude"].(string)
@@ -142,7 +142,7 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 		Query:     query,
 		Workspace: workspacePath,
 		Limit: &types.SearchLimit{
-			MaxResults:        limit,
+			MaxResults:        int(limit),
 			MaxResultsPerFile: conf.Get().Server.Search.Limit.MaxResultsPerFile,
 		},
 		Filters: &types.SearchFilters{

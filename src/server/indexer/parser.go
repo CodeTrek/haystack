@@ -108,26 +108,28 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		return nil, false, nil
 	}
 
-	content, err := os.ReadFile(fullPath)
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to read file: %w", err)
-	}
+	var hash string
+	var words []string
+	if fileSizeExceedLimit {
+		if existing == nil {
+			return nil, false, nil
+		}
+		hash = ""
+		words = []string{}
+	} else {
+		content, err := os.ReadFile(fullPath)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to read file: %w", err)
+		}
 
-	hash := GetContentHash(content)
+		hash := GetContentHash(content)
+		// If the document exists and the hash is the same, return nil
+		if existing != nil && existing.Hash == hash {
+			return nil, false, nil
+		}
 
-	// If the document exists and the hash is the same, return nil
-	if existing != nil && existing.Hash == hash {
-		return nil, false, nil
-	}
-
-	words := []string{}
-	if !fileSizeExceedLimit {
 		// We only index the content if the file size is below the limit
 		words = parseString(string(content))
-	} else {
-		// If the file is too large, we delete from the index
-		storage.DeleteDocument(file.Workspace.ID, id)
-		return nil, false, nil
 	}
 
 	return &storage.Document{

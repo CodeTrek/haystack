@@ -18,7 +18,7 @@ func Search(workspaceid string, query string, limit int) SearchResult {
 
 	db.Scan(EncodeKeywordSearchKey(workspaceid, query), func(key, value []byte) bool {
 		// _, keyword, _, _ := DecodeKeywordIndexKey(string(key))
-		docids := DecodeKeywordIndexValue(value)
+		docids := DecodeKeywordIndexValue(string(value))
 		if len(docids) > 0 {
 			/*
 				kr, ok := results.Keywords[keyword]
@@ -46,8 +46,12 @@ func Search(workspaceid string, query string, limit int) SearchResult {
 	return results
 }
 
-func ScanFiles(workspaceId string, callback func(relPath string) bool) {
-	db.Scan(EncodeDocumentPathKey(workspaceId, ""), func(_, value []byte) bool {
-		return callback(string(value))
+func ScanFiles(workspaceId string, callback func(docid, relPath string) bool) {
+	db.Scan(EncodeDocumentPathKey(workspaceId, ""), func(key, value []byte) bool {
+		_, docid := DecodeDocumentPathKey(string(key))
+		if docid == "" {
+			return true
+		}
+		return callback(docid, string(value))
 	})
 }

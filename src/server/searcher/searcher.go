@@ -305,7 +305,7 @@ func fuzzyMatchWithScore(pattern, text string) (bool, int) {
 
 func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) (types.SearchFilesResult, error) {
 	type MatchResult struct {
-		relPath string
+		RelPath string
 		Score   int
 	}
 
@@ -316,7 +316,7 @@ func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) 
 
 	pattern := strings.ReplaceAll(req.Query, " ", "")
 	matches := []MatchResult{}
-	storage.ScanFiles(workspace.ID, func(relPath string) bool {
+	storage.ScanFiles(workspace.ID, func(_, relPath string) bool {
 		if isTimeout() {
 			return false
 		}
@@ -328,7 +328,7 @@ func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) 
 		matched, score := fuzzyMatchWithScore(pattern, relPath)
 		if matched {
 			matches = append(matches, MatchResult{
-				relPath: relPath,
+				RelPath: relPath,
 				Score:   score,
 			})
 		}
@@ -338,7 +338,7 @@ func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) 
 	// Sort matches by score (highest first)
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].Score == matches[j].Score {
-			return len(matches[i].relPath) < len(matches[j].relPath)
+			return len(matches[i].RelPath) < len(matches[j].RelPath)
 		} else {
 			return matches[i].Score > matches[j].Score
 		}
@@ -349,15 +349,35 @@ func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) 
 		Files: []string{},
 	}
 
+	removedFiles := []string{}
 	// Filter and display only matches with score > 50
 	for _, match := range matches {
-		if match.Score > 50 {
-			result.Files = append(result.Files, match.relPath)
+		if match.Score <= 50 {
+			continue
+		}
+		stat, err := os.Stat(filepath.Join(workspace.Path, match.RelPath))
+		if os.IsNotExist(err) || stat.IsDir() {
+			log.Printf("Warning: file `%s` has been removed or is a directory", match.RelPath)
+			removedFiles = append(removedFiles, match.RelPath)
+			continue
+		}
+		if err != nil {
+			continue
 		}
 
+		result.Files = append(result.Files, match.RelPath)
 		if len(result.Files) >= req.Limit {
 			break
 		}
+	}
+
+	if len(removedFiles) > 0 {
+		go func() {
+			for _, relPath := range removedFiles {
+				// Remove the file from the index
+				indexer.RemoveFile(workspace, relPath)
+			}
+		}() // Remove the files from the workspace
 	}
 
 	return result, nil

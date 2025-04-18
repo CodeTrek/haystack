@@ -92,11 +92,11 @@ func RemoveFile(workspace *workspace.Workspace, relPath string) error {
 	fullPath := filepath.Join(workspace.Path, relPath)
 
 	docid := GetDocumentId(fullPath)
-
-	storage.DeleteDocument(workspace.ID, docid)
+	if err := storage.DeleteDocument(workspace.ID, docid); err != nil {
+		return err
+	}
 
 	workspace.AddTotalFiles(-1)
-
 	workspace.Save()
 	return nil
 }

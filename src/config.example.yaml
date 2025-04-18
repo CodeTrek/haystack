@@ -23,6 +23,7 @@ client:
 server:
   max_file_size: 2097152 # the maximum file size to index, default is 2MB
   index_workers: 4 # the number of workers to index files, default is 4
+  cache_size: 16 # the size of the cache to use, default is 16MB
   filters:
     exclude:
       use_git_ignore: false
