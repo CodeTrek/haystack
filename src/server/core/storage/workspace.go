@@ -92,7 +92,7 @@ func (t *deleteWorkspaceTask) Run() {
 	batch.Delete(EncodeWorkspaceKey(t.WorkspaceID))
 	batch.DeletePrefix(EncodeDocumentMetaKey(t.WorkspaceID, ""))
 	batch.DeletePrefix(EncodeDocumentWordsKey(t.WorkspaceID, ""))
-	batch.DeletePrefix(EncodeKeywordIndexKeyPrefix(t.WorkspaceID, ""))
+	batch.DeletePrefix(EncodeKeywordSearchKey(t.WorkspaceID, ""))
 	t.done <- batch.Commit()
 }
 

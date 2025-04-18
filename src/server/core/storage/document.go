@@ -67,7 +67,7 @@ func GetDocumentWords(workspaceid string, docid string) ([]string, error) {
 		return []string{}, nil
 	}
 
-	return DecodeKeywordIndexValue(words), nil
+	return DecodeKeywordIndexValue(string(words)), nil
 }
 
 // SaveNewDocuments saves new documents to the database
@@ -101,7 +101,7 @@ func UpdateDocuments(workspaceid string, updatedDocs []*Document) error {
 func DeleteDocument(workspaceid string, docid string) error {
 	t := &deleteDocumentTask{
 		WorkspaceID: workspaceid,
-		DocID:       docid,
+		DocId:       docid,
 		done:        make(chan error),
 	}
 

@@ -68,6 +68,7 @@ type Server struct {
 	IndexWorkers int     `yaml:"index_workers,omitempty"`
 	Filters      Filters `yaml:"filters,omitempty"`
 	Search       Search  `yaml:"search,omitempty"`
+	CacheSize    int64   `yaml:"cache_size,omitempty"`
 
 	LoggingStdout bool `yaml:"logging_stdout,omitempty"`
 }

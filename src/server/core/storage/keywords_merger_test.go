@@ -92,7 +92,7 @@ func TestRewriteIndex(t *testing.T) {
 				Keyword:     "keyword1",
 				Rows: []RecordRow{
 					{
-						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword1", 10, "hash1")),
+						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword1", 10)),
 						Value:    string(EncodeKeywordIndexValue([]string{"doc1", "doc2", "doc3"})),
 						DocCount: 3,
 					},
@@ -108,12 +108,12 @@ func TestRewriteIndex(t *testing.T) {
 				Keyword:     "keyword2",
 				Rows: []RecordRow{
 					{
-						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword2", 2, "hash1")),
+						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword2", 2)),
 						Value:    string(EncodeKeywordIndexValue([]string{"doc1", "doc2"})),
 						DocCount: 2,
 					},
 					{
-						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword2", 3, "hash2")),
+						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword2", 3)),
 						Value:    string(EncodeKeywordIndexValue([]string{"doc3", "doc4", "doc5"})),
 						DocCount: 3,
 					},
@@ -129,12 +129,12 @@ func TestRewriteIndex(t *testing.T) {
 				Keyword:     "keyword3",
 				Rows: []RecordRow{
 					{
-						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword3", 600, "hash1")),
+						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword3", 600)),
 						Value:    string(EncodeKeywordIndexValue(make([]string, 600))),
 						DocCount: 600,
 					},
 					{
-						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword3", 700, "hash2")),
+						Key:      string(EncodeKeywordIndexKey("test-workspace", "keyword3", 700)),
 						Value:    string(EncodeKeywordIndexValue(make([]string, 700))),
 						DocCount: 700,
 					},
@@ -148,8 +148,8 @@ func TestRewriteIndex(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create a batch for testing
-			batch := db.Batch()
-			defer batch.Close()
+			batch := NewBatchWrite(db)
+			defer batch.batch.Close()
 
 			// For testing, we'll first add the records to the DB
 			for _, row := range tc.index.Rows {
@@ -221,7 +221,7 @@ func TestMergeKeywordsIndex(t *testing.T) {
 	}
 
 	for _, td := range testData {
-		key := EncodeKeywordIndexKey(td.workspaceId, td.keyword, td.docCount, "hash")
+		key := EncodeKeywordIndexKey(td.workspaceId, td.keyword, td.docCount)
 		value := EncodeKeywordIndexValue(td.docIds)
 		err := db.Put(key, value)
 		if err != nil {
@@ -310,7 +310,7 @@ func TestKeywordsMergerRun(t *testing.T) {
 	}
 
 	for _, td := range testData {
-		key := EncodeKeywordIndexKey(td.workspaceId, td.keyword, td.docCount, "hash")
+		key := EncodeKeywordIndexKey(td.workspaceId, td.keyword, td.docCount)
 		value := EncodeKeywordIndexValue(td.docIds)
 		err := db.Put(key, value)
 		if err != nil {

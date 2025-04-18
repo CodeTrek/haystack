@@ -2,7 +2,9 @@ package pebble
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +17,7 @@ type DB struct {
 	path   string
 	db     *pebble.DB
 	closed atomic.Bool
+	cache  *pebble.Cache
 }
 
 // OpenDB opens a Pebble database at the specified path
@@ -32,20 +35,23 @@ func OpenDB(path string) (*DB, error) {
 			return 500 * time.Microsecond
 		},
 		// Allow more files to be open
-		MaxOpenFiles: 2000,
+		MaxOpenFiles: 8192,
 
 		// Set write buffer size to 8MB
-		MemTableSize: 8 * 1024 * 1024,
+		MemTableSize: 4 * 1024 * 1024,
 		// Set max memtable count to 2
 		MemTableStopWritesThreshold: 2,
-		// Set L0 compaction threshold to 16
-		L0CompactionThreshold: 16,
-		// Set L0 stop writes threshold to 32
-		L0StopWritesThreshold: 32,
+
+		// The count of L0 files necessary to trigger an L0 compaction.
+		L0CompactionFileThreshold: 1024,
+		// Set L0 compaction threshold to 8
+		L0CompactionThreshold: 8,
+		// Set L0 stop writes threshold to 12
+		L0StopWritesThreshold: 12,
 		// Enable bloom filter
 		Levels: []pebble.LevelOptions{
 			{
-				BlockSize:    16 * 1024,
+				BlockSize:    32 * 1024,
 				FilterPolicy: bloom.FilterPolicy(10),
 			},
 		},
@@ -65,6 +71,15 @@ func OpenDB(path string) (*DB, error) {
 	pdb.closed.Store(false)
 
 	return pdb, nil
+}
+
+func (d *DB) ScheduleCompact() {
+	go func() {
+		start := time.Now()
+		log.Println("Compacting database...")
+		d.db.Compact([]byte{0}, []byte{0xff}, false)
+		log.Println("Compact done, took", time.Since(start))
+	}()
 }
 
 // Close closes the database
@@ -161,7 +176,12 @@ func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	}
 	defer iter.Close()
 
+	prefixStr := string(prefix)
 	for iter.First(); iter.Valid(); iter.Next() {
+		if !strings.HasPrefix(string(iter.Key()), prefixStr) {
+			// If the key doesn't start with the prefix, break the loop
+			break
+		}
 		// We're not going to copy silently for performance reasons.
 		// It's user's responsibility to copy the key and value if they need to use them later.
 		//

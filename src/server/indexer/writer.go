@@ -41,19 +41,19 @@ func (w *Writer) run(wg *sync.WaitGroup) {
 		select {
 		case doc := <-w.docs:
 			docs := []*WriteDoc{doc}
-			docs = append(docs, w.getPendingWrites(63)...)
+			docs = append(docs, w.getPendingWrites(7)...)
 
 			w.processDocs(docs)
 		case <-running.GetShutdown().Done():
 			for {
-				docs := w.getPendingWrites(64)
+				docs := w.getPendingWrites(8)
 				if len(docs) == 0 {
 					break
 				}
 				w.processDocs(docs)
 
 				// Sleep to wait for remaining docs to be added to the channel
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 
 			return

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"strings"
 )
@@ -14,6 +15,7 @@ const (
 	DocPathPrefix   = "dp:"
 	WorkspacePrefix = "ws:"
 	KeywordPrefix   = "kw:"
+	MergeIndexKey   = "merge-index"
 )
 
 func EncodeWorkspaceKey(workspaceid string) []byte {
@@ -32,6 +34,24 @@ func DecodeWorkspaceKey(key string) string {
 
 func EncodeDocumentPathKey(workspaceid string, docid string) []byte {
 	return []byte(fmt.Sprintf("%s%s|%s", DocPathPrefix, workspaceid, docid))
+}
+
+func DecodeDocumentPathKey(key string) (string, string) {
+	if !strings.HasPrefix(key, DocPathPrefix) {
+		return "", ""
+	}
+
+	key = strings.TrimPrefix(key, DocPathPrefix)
+
+	parts := strings.Split(key, "|")
+	if len(parts) != 2 {
+		return "", ""
+	}
+
+	workspaceid := parts[0]
+	docid := parts[1]
+
+	return workspaceid, docid
 }
 
 func EncodeDocumentMetaKey(workspaceid string, docid string) []byte {
@@ -78,11 +98,12 @@ func EncodeKeywordSearchKey(workspaceid string, query string) []byte {
 }
 
 func EncodeKeywordIndexKeyPrefix(workspaceid string, keyword string) []byte {
-	return []byte(fmt.Sprintf("%s%s|%s", KeywordPrefix, workspaceid, keyword))
+	return []byte(fmt.Sprintf("%s%s|%s|", KeywordPrefix, workspaceid, keyword))
 }
 
-func EncodeKeywordIndexKey(workspaceid string, keyword string, doccount int, docshash string) []byte {
-	return []byte(fmt.Sprintf("%s|%d|%s", string(EncodeKeywordIndexKeyPrefix(workspaceid, keyword)), doccount, docshash))
+func EncodeKeywordIndexKey(workspaceid string, keyword string, doccount int) []byte {
+	return []byte(fmt.Sprintf("%s%d|%d",
+		string(EncodeKeywordIndexKeyPrefix(workspaceid, keyword)), doccount, time.Now().UnixMicro()))
 }
 
 func DecodeKeywordIndexKey(key string) (string, string, int, string) {
@@ -103,15 +124,15 @@ func DecodeKeywordIndexKey(key string) (string, string, int, string) {
 	if err != nil {
 		return "", "", 0, ""
 	}
-	docshash := parts[3]
+	tick := parts[3]
 
-	return workspaceid, keyword, doccount, docshash
+	return workspaceid, keyword, doccount, tick
 }
 
 func EncodeKeywordIndexValue(docids []string) []byte {
 	return []byte(strings.Join(docids, "|"))
 }
 
-func DecodeKeywordIndexValue(data []byte) []string {
-	return strings.Split(string(data), "|")
+func DecodeKeywordIndexValue(data string) []string {
+	return strings.Split(data, "|")
 }

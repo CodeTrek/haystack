@@ -12,6 +12,7 @@ import (
 )
 
 const StorageVersion = "1.0"
+const Shards = 8
 
 var (
 	db             *pebble.DB
