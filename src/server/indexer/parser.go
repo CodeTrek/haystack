@@ -100,7 +100,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	fileSizeExceedLimit := info.Size() > conf.Get().Server.MaxFileSize
 	if fileSizeExceedLimit {
-		log.Printf("File %s (%.2f MiB) is too large to index, skipping", file.FilePath, float64(info.Size())/1024/1024)
+		log.Printf("File `%s` (%.2f MiB) is too large to index, skipping", file.FilePath, float64(info.Size())/1024/1024)
 	}
 
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
@@ -120,6 +120,10 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to read file: %w", err)
+		}
+		if !IsLikelyText(content) {
+			log.Printf("File `%s` is not a text file, skipping", file.FilePath)
+			return nil, false, nil
 		}
 
 		hash := GetContentHash(content)
