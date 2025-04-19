@@ -27,12 +27,16 @@ type Scanner struct {
 	current *workspace.Workspace
 	queue   *list.List
 	mu      sync.RWMutex
+	stop    chan struct{}
+	done    chan struct{}
 }
 
 // NewScanner creates a new Scanner instance.
 func NewScanner() *Scanner {
 	return &Scanner{
 		queue: list.New(),
+		stop:  make(chan struct{}),
+		done:  make(chan struct{}),
 	}
 }
 
@@ -43,16 +47,22 @@ func (s *Scanner) Start(wg *sync.WaitGroup) {
 	go s.run(wg)
 }
 
+func (s *Scanner) Stop() {
+	close(s.stop)
+	<-s.done
+	log.Println("Scanner stopped")
+}
+
 // run is the main scanning loop that processes workspaces from the queue.
 func (s *Scanner) run(wg *sync.WaitGroup) {
 	defer wg.Done()
-	defer log.Println("Scanner stopped")
 
-	for !running.IsShuttingDown() {
+	for {
 		workspace := s.tryPopJob()
 		if workspace == nil {
 			select {
-			case <-running.GetShutdown().Done():
+			case <-s.stop:
+				close(s.done)
 				return
 			case <-time.After(500 * time.Millisecond):
 				continue
@@ -105,12 +115,10 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 		}
 
 		if include.Match(fileInfo.Path, false) {
-			parser.Add(w, fileInfo.Path, true)
+			parser.Add(w, fileInfo.Path)
 			fileCount++
 
 			w.AddIndexingTotalFiles(1)
-		} else {
-			parser.Add(w, fileInfo.Path, false)
 		}
 
 		if time.Since(lastTime) > 1000*time.Millisecond {

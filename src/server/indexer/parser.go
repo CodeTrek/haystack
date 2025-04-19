@@ -5,7 +5,6 @@ import (
 	"haystack/conf"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
-	"haystack/shared/running"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,39 +19,50 @@ import (
 type ParseFile struct {
 	Workspace *workspace.Workspace
 	FilePath  string
-	Included  bool
 }
 
 // Parser handles concurrent file parsing operations
 type Parser struct {
-	ch chan ParseFile
+	ch   chan ParseFile
+	stop chan struct{}
+	done chan struct{}
 }
 
 // NewParser creates a new Parser instance
 func NewParser() *Parser {
-	return &Parser{}
+	return &Parser{
+		ch:   make(chan ParseFile, 32),
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
+	}
 }
 
 // Start initializes the parser with worker goroutines
 func (p *Parser) Start(wg *sync.WaitGroup) {
-
-	p.ch = make(chan ParseFile, 32)
-
 	for i := 0; i < conf.Get().Server.IndexWorkers; i++ {
 		wg.Add(1)
 		go p.run(i, wg)
 	}
 }
 
+func (p *Parser) Stop() {
+	close(p.stop)
+	for range conf.Get().Server.IndexWorkers {
+		<-p.done
+	}
+	close(p.done)
+	defer log.Printf("Parser stopped")
+}
+
 // run executes the parsing logic in a worker goroutine
 func (p *Parser) run(id int, wg *sync.WaitGroup) {
 	log.Printf("Parser %d started", id)
 	defer wg.Done()
-	defer log.Printf("Parser %d stopped", id)
 
 	for {
 		select {
-		case <-running.GetShutdown().Done():
+		case <-p.stop:
+			p.done <- struct{}{}
 			return
 		case file := <-p.ch:
 			p.processFile(file)
@@ -80,11 +90,10 @@ func (p *Parser) processFile(file ParseFile) error {
 }
 
 // Add queues a file for parsing
-func (p *Parser) Add(workspace *workspace.Workspace, relPath string, included bool) {
+func (p *Parser) Add(workspace *workspace.Workspace, relPath string) {
 	p.ch <- ParseFile{
 		Workspace: workspace,
 		FilePath:  relPath,
-		Included:  included,
 	}
 }
 
@@ -106,14 +115,13 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
 	// If the document exists and the modified time is the same, return nil
 	if existing != nil &&
-		existing.ModifiedTime == info.ModTime().UnixNano() &&
-		existing.Included == file.Included {
+		existing.ModifiedTime == info.ModTime().UnixNano() {
 		return nil, false, nil
 	}
 
 	var hash string
 	var words []string
-	if !file.Included || fileSizeExceedLimit {
+	if fileSizeExceedLimit {
 		hash = ""
 		words = []string{}
 	} else {
@@ -143,7 +151,6 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),
 		LastSyncTime: time.Now().UnixNano(),
-		Included:     file.Included,
 		Hash:         hash,
 		Words:        words,
 		PathWords:    parseString(file.FilePath),

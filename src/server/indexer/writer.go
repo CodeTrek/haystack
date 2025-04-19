@@ -3,7 +3,6 @@ package indexer
 import (
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
-	"haystack/shared/running"
 	"log"
 	"sync"
 	"time"
@@ -17,11 +16,15 @@ type WriteDoc struct {
 
 type Writer struct {
 	docs chan *WriteDoc
+	stop chan struct{}
+	done chan struct{}
 }
 
 func NewWriter() *Writer {
 	return &Writer{
 		docs: make(chan *WriteDoc, 64),
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
 	}
 }
 
@@ -30,10 +33,15 @@ func (w *Writer) Start(wg *sync.WaitGroup) {
 	go w.run(wg)
 }
 
+func (w *Writer) Stop() {
+	close(w.stop)
+	<-w.done
+	log.Println("Writer stopped")
+}
+
 func (w *Writer) run(wg *sync.WaitGroup) {
 	log.Println("Writer started")
 	defer wg.Done()
-	defer log.Println("Writer stopped")
 	timer := time.NewTicker(1000 * time.Millisecond)
 	defer timer.Stop()
 
@@ -44,7 +52,7 @@ func (w *Writer) run(wg *sync.WaitGroup) {
 			docs = append(docs, w.getPendingWrites(7)...)
 
 			w.processDocs(docs)
-		case <-running.GetShutdown().Done():
+		case <-w.stop:
 			for {
 				docs := w.getPendingWrites(8)
 				if len(docs) == 0 {
@@ -55,7 +63,7 @@ func (w *Writer) run(wg *sync.WaitGroup) {
 				// Sleep to wait for remaining docs to be added to the channel
 				time.Sleep(100 * time.Millisecond)
 			}
-
+			close(w.done)
 			return
 		}
 	}
