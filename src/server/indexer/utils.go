@@ -34,6 +34,19 @@ func isTextMIME(mtype string) bool {
 	return false
 }
 
+// isMediaMIME checks if the MIME type is a media type such as image, video,
+// or audio. It returns true if the MIME type is likely to be media.
+// This function is a simplified version and may not cover all cases.
+// It is used to determine if the content is likely to be media based on its MIME type.
+func isMediaMIME(mtype string) bool {
+	if strings.HasPrefix(mtype, "image/") ||
+		strings.HasPrefix(mtype, "video/") ||
+		strings.HasPrefix(mtype, "audio/") {
+		return true
+	}
+	return false
+}
+
 // isProbablyText checks if the data is likely to be text based on a heuristic.
 // It counts the number of printable characters and checks if they are
 // above a certain threshold. This is a simple heuristic and may not be
@@ -58,6 +71,10 @@ func IsLikelyText(data []byte) bool {
 	minetype := mimetype.Detect(data)
 	if isTextMIME(minetype.String()) {
 		return true
+	}
+
+	if isMediaMIME(minetype.String()) {
+		return false
 	}
 
 	return isProbablyText(data)
