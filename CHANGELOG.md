@@ -1,5 +1,8 @@
 # Changelog
 
+## [next]
+- Text file auto detection
+
 ## [1.2.1]
 - Merge inverted index
 - Add APIs to change workspace settings
