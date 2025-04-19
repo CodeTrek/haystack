@@ -57,6 +57,11 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		}
 	}
 
+	var globalInclude *utils.SimpleFilter
+	if len(workspace.GetFilters().Include) > 0 {
+		globalInclude = utils.NewSimpleFilter(workspace.GetFilters().Include, workspace.Path)
+	}
+
 	var includeFilter *utils.SimpleFilter
 	var excludeFilter *utils.SimpleFilter
 	var pathFilter = ""
@@ -76,6 +81,11 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	// Check if the file should be included in the search
 	var wantFile = func(doc *storage.Document) bool {
 		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(doc.FullPath), pathFilter) {
+			return false
+		}
+
+		// File not included by workspace filters
+		if globalInclude != nil && !globalInclude.Match(doc.FullPath, false) {
 			return false
 		}
 

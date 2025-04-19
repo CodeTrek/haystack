@@ -105,7 +105,9 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
 	// If the document exists and the modified time is the same, return nil
-	if existing != nil && existing.ModifiedTime == info.ModTime().UnixNano() && existing.Included == file.Included {
+	if existing != nil &&
+		existing.ModifiedTime == info.ModTime().UnixNano() &&
+		existing.Included == file.Included {
 		return nil, false, nil
 	}
 
