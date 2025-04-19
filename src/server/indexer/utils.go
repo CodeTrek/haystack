@@ -2,10 +2,65 @@ package indexer
 
 import (
 	"haystack/utils"
+	"path/filepath"
 	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
 )
+
+var NotIndexiableFileExts = map[string]struct{}{
+	".ds_store": {},
+	".exe":      {},
+	".dll":      {},
+	".lib":      {},
+	".so":       {},
+	".class":    {},
+	".jar":      {},
+	".pyc":      {},
+	".pyo":      {},
+	".bin":      {},
+	".pdb":      {},
+	".dmp":      {},
+	".wasm":     {},
+
+	".png":  {},
+	".jpg":  {},
+	".jpeg": {},
+	".gif":  {},
+	".bmp":  {},
+	".ico":  {},
+	".svg":  {},
+	".tiff": {},
+	".webp": {},
+
+	".mp4":  {},
+	".mkv":  {},
+	".avi":  {},
+	".mov":  {},
+	".wmv":  {},
+	".mp3":  {},
+	".wav":  {},
+	".flac": {},
+	".aac":  {},
+	".ogg":  {},
+	".opus": {},
+
+	".pdf":  {},
+	".doc":  {},
+	".docx": {},
+	".xls":  {},
+	".xlsx": {},
+	".ppt":  {},
+	".pptx": {},
+
+	".zip": {},
+	".tar": {},
+	".gz":  {},
+	".bz2": {},
+	".7z":  {},
+	".rar": {},
+	".xz":  {},
+}
 
 func GetDocumentId(fullPath string) string {
 	return utils.Md5HashString(fullPath)
@@ -13,6 +68,29 @@ func GetDocumentId(fullPath string) string {
 
 func GetContentHash(content []byte) string {
 	return utils.Md5Hash(content)
+}
+
+func IsNotIndexiable(relPath string) bool {
+	fileExt := strings.ToLower(filepath.Ext(relPath))
+	if _, ok := NotIndexiableFileExts[fileExt]; ok {
+		return true
+	}
+	return false
+}
+
+// IsLikelyText checks if the data is likely to be text based on its MIME type
+// and a heuristic for binary data. It returns true if the data is likely text.
+func IsLikelyText(data []byte) bool {
+	minetype := mimetype.Detect(data)
+	if isTextMIME(minetype.String()) {
+		return true
+	}
+
+	if isMediaMIME(minetype.String()) {
+		return false
+	}
+
+	return isProbablyText(data)
 }
 
 // isTextMIME checks if the MIME type is a text type or a known text-like type
@@ -63,19 +141,4 @@ func isProbablyText(data []byte) bool {
 	// This is a heuristic and may not be perfect
 	// but should work for most text files.
 	return float64(printable)/float64(len(data)) > 0.95
-}
-
-// IsLikelyText checks if the data is likely to be text based on its MIME type
-// and a heuristic for binary data. It returns true if the data is likely text.
-func IsLikelyText(data []byte) bool {
-	minetype := mimetype.Detect(data)
-	if isTextMIME(minetype.String()) {
-		return true
-	}
-
-	if isMediaMIME(minetype.String()) {
-		return false
-	}
-
-	return isProbablyText(data)
 }

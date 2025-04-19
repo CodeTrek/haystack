@@ -100,6 +100,10 @@ func (s *Scanner) processWorkspace(w *workspace.Workspace) error {
 			return false
 		}
 
+		if IsNotIndexiable(fileInfo.Path) {
+			return true
+		}
+
 		if include.Match(fileInfo.Path, false) {
 			parser.Add(w, fileInfo.Path, true)
 			fileCount++
