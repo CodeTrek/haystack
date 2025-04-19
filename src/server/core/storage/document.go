@@ -8,7 +8,6 @@ type Document struct {
 	Hash         string `json:"hash"`
 	ModifiedTime int64  `json:"modified_time"`
 	LastSyncTime int64  `json:"last_sync_time"`
-	Included     bool   `json:"included"`
 
 	Words     []string `json:"-"` // words in the document content
 	PathWords []string `json:"-"` // words in the document relative-path

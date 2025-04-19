@@ -33,9 +33,17 @@ func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	ws, _ := workspace.GetByPath(request.Workspace)
 	if ws != nil {
 		log.Printf("Create workspace `%s`: already exists", request.Workspace)
-		json.NewEncoder(w).Encode(types.CommonResponse{
+		json.NewEncoder(w).Encode(types.CreateWorkspaceResponse{
 			Code:    0,
 			Message: "Workspace already exists",
+			Data: types.Workspace{
+				ID:           ws.ID,
+				Path:         ws.Path,
+				CreatedAt:    ws.CreatedAt,
+				LastAccessed: ws.LastAccessed,
+				LastFullSync: ws.LastFullSync,
+				Indexing:     true,
+			},
 		})
 		return
 	}
