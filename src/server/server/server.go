@@ -35,6 +35,7 @@ func StartServer(wg *sync.WaitGroup, addr string) {
 	http.HandleFunc("/api/v1/workspace/get", handleGetWorkspace)
 	http.HandleFunc("/api/v1/workspace/sync-all", handleSyncAllWorkspaces)
 	http.HandleFunc("/api/v1/workspace/sync", handleSyncWorkspace)
+	http.HandleFunc("/api/v1/workspace/update", handleUpdateWorkspace)
 
 	http.HandleFunc("/api/v1/search/content", handleSearchContent)
 	http.HandleFunc("/api/v1/search/files", handleSearchFiles)
@@ -57,10 +58,11 @@ func StartServer(wg *sync.WaitGroup, addr string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	log.Println("Stopping HTTP server...")
 	// Shutdown the server
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("HTTP server exiting")
+	log.Println("HTTP server stopped")
 }

@@ -116,7 +116,7 @@ func CloseAndWait() {
 		closeWriteQueue.Wait()
 
 		log.Println("Closing storage...")
-		defer log.Println("Storage closed.")
+		defer log.Println("Storage closed")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

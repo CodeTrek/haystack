@@ -27,3 +27,13 @@ type HealthResponse struct {
 	Message string     `json:"message"`
 	Data    HealthInfo `json:"data"`
 }
+
+type Exclude struct {
+	UseGitIgnore bool     `yaml:"use_git_ignore,omitempty" json:"use_git_ignore,omitempty"`
+	Customized   []string `yaml:"customized,omitempty"     json:"customized,omitempty"` // Won't be used if enable_git_ignore is true
+}
+
+type Filters struct {
+	Exclude Exclude  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
+	Include []string `yaml:"include,omitempty" optional:"true" json:"include,omitempty"`
+}

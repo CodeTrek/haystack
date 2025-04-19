@@ -37,16 +37,6 @@ var (
 		"*.log.*", "*log.txt"}
 )
 
-type Exclude struct {
-	UseGitIgnore bool     `yaml:"use_git_ignore,omitempty" json:"use_git_ignore,omitempty"`
-	Customized   []string `yaml:"customized,omitempty"     json:"customized,omitempty"` // Won't be used if enable_git_ignore is true
-}
-
-type Filters struct {
-	Exclude Exclude  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
-	Include []string `yaml:"include,omitempty" optional:"true" json:"include,omitempty"`
-}
-
 type Global struct {
 	DataPath string `yaml:"data_path,omitempty"`
 	Port     int    `yaml:"port,omitempty"`
@@ -64,11 +54,11 @@ type Search struct {
 }
 
 type Server struct {
-	MaxFileSize  int64   `yaml:"max_file_size,omitempty"`
-	IndexWorkers int     `yaml:"index_workers,omitempty"`
-	Filters      Filters `yaml:"filters,omitempty"`
-	Search       Search  `yaml:"search,omitempty"`
-	CacheSize    int64   `yaml:"cache_size,omitempty"`
+	MaxFileSize  int64         `yaml:"max_file_size,omitempty"`
+	IndexWorkers int           `yaml:"index_workers,omitempty"`
+	Filters      types.Filters `yaml:"filters,omitempty"`
+	Search       Search        `yaml:"search,omitempty"`
+	CacheSize    int64         `yaml:"cache_size,omitempty"`
 
 	LoggingStdout bool `yaml:"logging_stdout,omitempty"`
 }
@@ -98,9 +88,9 @@ var conf = &Conf{
 	Server: Server{
 		MaxFileSize:  DefaultMaxFileSize,
 		IndexWorkers: DefaultIndexWorkers,
-		Filters: Filters{
+		Filters: types.Filters{
 			Include: DefaultInclude,
-			Exclude: Exclude{
+			Exclude: types.Exclude{
 				UseGitIgnore: false,
 				Customized:   DefaultExclude,
 			},

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"haystack/server/core/storage"
 	"haystack/server/core/workspace"
+	"haystack/shared/types"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,11 +28,15 @@ func Run(wg *sync.WaitGroup) {
 	log.Println("Indexer started.")
 }
 
-func CreateWorkspace(workspacePath string) (*workspace.Workspace, error) {
+func CreateWorkspace(workspacePath string, useGlobalFilter bool, filters *types.Filters) (*workspace.Workspace, error) {
 	w, err := workspace.Create(workspacePath)
 	if err != nil {
 		return nil, err
 	}
+
+	w.UseGlobalFilters = useGlobalFilter
+	w.Filters = filters
+	w.Save()
 
 	Sync(w)
 	return w, nil
@@ -73,7 +78,7 @@ func AddOrSyncFile(workspace *workspace.Workspace, relPath string) error {
 		}
 
 		// Add new file to the parser queue
-		parser.Add(workspace, relPath)
+		parser.Add(workspace, relPath, true)
 	} else {
 		stat, err := os.Stat(fullPath)
 		if err != nil || stat.IsDir() {
@@ -81,7 +86,7 @@ func AddOrSyncFile(workspace *workspace.Workspace, relPath string) error {
 			RemoveFile(workspace, relPath)
 		} else {
 			// Sync existing file to the parser queue
-			parser.Add(workspace, relPath)
+			parser.Add(workspace, relPath, true)
 		}
 	}
 
@@ -138,7 +143,7 @@ func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *storage.Document) 
 
 	// If the file has been modified, add it to the parser queue
 	if stat.ModTime().UnixNano() != doc.ModifiedTime {
-		parser.Add(workspace, relPath)
+		parser.Add(workspace, relPath, true)
 	}
 
 	return false, relPath, nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"haystack/conf"
 	"haystack/server/core/storage"
+	"haystack/shared/types"
 	"sync"
 	"time"
 )
@@ -16,11 +17,11 @@ type IndexingStatus struct {
 }
 
 type Workspace struct {
-	ID               string        `json:"id"`
-	Path             string        `json:"path"`
-	UseGlobalFilters bool          `json:"use_global_filters"`
-	Filters          *conf.Filters `json:"filters" optional:"true"`
-	TotalFiles       int           `json:"total_files"`
+	ID               string         `json:"id"`
+	Path             string         `json:"path"`
+	UseGlobalFilters bool           `json:"use_global_filters"`
+	Filters          *types.Filters `json:"filters,omitempty" optional:"true"`
+	TotalFiles       int            `json:"total_files"`
 
 	CreatedAt    time.Time `json:"created_time"`
 	LastAccessed time.Time `json:"last_accessed_time"`
@@ -115,14 +116,23 @@ func (w *Workspace) UpdateLastFullSync() {
 	w.LastFullSync = time.Now()
 }
 
-func (w *Workspace) GetFilters() conf.Filters {
+func (w *Workspace) GetFilters() types.Filters {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	if w.Filters == nil || w.UseGlobalFilters {
 		return conf.Get().Server.Filters
 	}
 
-	return *w.Filters
+	t := *w.Filters
+	if !t.Exclude.UseGitIgnore && len(t.Exclude.Customized) == 0 {
+		t.Exclude.Customized = conf.Get().Server.Filters.Exclude.Customized
+	}
+
+	if len(t.Include) == 0 {
+		t.Include = conf.Get().Server.Filters.Include
+	}
+
+	return t
 }
 
 func (w *Workspace) SetDeleted() {
