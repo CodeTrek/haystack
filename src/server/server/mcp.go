@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -55,11 +56,11 @@ func registerMCPTools(mcpServer *server.MCPServer) {
 	config := conf.Get()
 
 	mcpServer.AddTool(mcp.NewTool(string(HaystackSearch),
-		mcp.WithDescription("Search for code in the Haystack index. The search engine supports prefix matching and "+
+		mcp.WithDescription("Search for code in current project, supports prefix matching and "+
 			"logical operators to help you find exactly what you're looking for in your codebase."),
 		mcp.WithString("query",
 			mcp.Description("The search query. Supports the following syntax features:\n"+
-				"- Basic terms: single words like 'function' or exact phrases in quotes like \"hello world\"\n"+
+				"- Basic terms: single words like 'function'\n"+
 				"- Prefix matching: 'func*' matches 'function', 'functional', etc. (wildcard only at end of term)\n"+
 				"- Logical operators: 'AND' (or space) for conjunction, '|' for OR operator\n"+
 				"- Examples: 'error AND handle', 'create | update', 'init*'"),
@@ -86,8 +87,8 @@ func registerMCPTools(mcpServer *server.MCPServer) {
 	), handleSearch)
 
 	mcpServer.AddTool(mcp.NewTool(string(HaystackFiles),
-		mcp.WithDescription("Search for files in the Haystack index. The search engine supports fuzzy matching"+
-			" on filenames and attempts to return a list of the most relevant files"),
+		mcp.WithDescription("Search for files in current project, supports fuzzy matching "+
+			"on filenames and attempts to return a list of the most relevant files"),
 		mcp.WithString("query",
 			mcp.Description("The search query which is case-insensitive. Fuzzy match\n"+
 				"e.g. query 'savedtabgroup' will match 'saved_tab_group', 'src/**/saved/tabgroup'"),
@@ -150,6 +151,7 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 			Include: filter,
 			Exclude: exclude,
 		},
+		BeforeAfter: 1,
 	}
 
 	results, truncate := searcher.SearchContent(workspace, &req)
@@ -165,35 +167,34 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 		return ""
 	}
 
-	tr := &mcp.CallToolResult{}
-	tr.Content = append(tr.Content, mcp.TextContent{
-		Type: "text",
-		Text: fmt.Sprintf("Found %d results in %d files%s", resultCount, len(results), toTruncated(truncate)),
-	})
-
-	if len(results) == 0 {
+	var printLine = func(tr *mcp.CallToolResult, line string) {
 		tr.Content = append(tr.Content, mcp.TextContent{
 			Type: "text",
-			Text: "No results found.",
+			Text: line,
 		})
+	}
+
+	tr := &mcp.CallToolResult{}
+	printLine(tr, fmt.Sprintf("Found %d results in %d files%s", resultCount, len(results), toTruncated(truncate)))
+
+	if len(results) == 0 {
+		printLine(tr, "No results found.")
 		return tr, nil
 	}
 
 	for _, result := range results {
-		tr.Content = append(tr.Content, mcp.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("File: %s, %d result%s", result.File, len(result.Lines), toTruncated(result.Truncate)),
-		})
+		printLine(tr, "")
+		printLine(tr, fmt.Sprintf("File: %s, %d result%s", result.File, len(result.Lines), toTruncated(result.Truncate)))
+		printLine(tr, strings.Repeat("-", 20))
 		for _, line := range result.Lines {
-			tr.Content = append(tr.Content, mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Line %d: %s", line.Line.LineNumber, line.Line.Content),
-			})
+			for _, before := range line.Before {
+				printLine(tr, fmt.Sprintf("Line %d: %s", before.LineNumber, before.Content))
+			}
+			printLine(tr, fmt.Sprintf("Line %d: %s", line.Line.LineNumber, line.Line.Content))
+			for _, after := range line.After {
+				printLine(tr, fmt.Sprintf("Line %d: %s", after.LineNumber, after.Content))
+			}
 		}
-		tr.Content = append(tr.Content, mcp.TextContent{
-			Type: "text",
-			Text: "",
-		})
 	}
 
 	return tr, nil

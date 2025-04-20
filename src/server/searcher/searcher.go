@@ -113,6 +113,13 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	finalResults := []types.SearchContentResult{}
 	totalHits := 0
 
+	beforeAfter := req.BeforeAfter
+	if beforeAfter < 0 {
+		beforeAfter = 0
+	} else if beforeAfter > 5 {
+		beforeAfter = 5
+	}
+
 	// Match the content of the file line by line
 	var matchFileContent = func(relPath string, doc *storage.Document) (types.SearchContentResult, error) {
 		fileMatch := types.SearchContentResult{
@@ -130,10 +137,14 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 
 		scanner := bufio.NewScanner(file)
 
+		lines := []string{}
 		lineNumber := 1
 		fileHits := 0
 		for scanner.Scan() {
 			line := scanner.Text()
+			if beforeAfter > 0 {
+				lines = append(lines, line)
+			}
 			matches := engine.IsLineMatch(line)
 			if len(matches) > 0 {
 				for _, match := range matches {
@@ -157,6 +168,34 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 				}
 			}
 			lineNumber++
+		}
+
+		// Populate before and after context lines
+		if beforeAfter > 0 {
+			for i := 0; i < len(fileMatch.Lines); i++ {
+				line := &fileMatch.Lines[i]
+				lineNum := line.Line.LineNumber
+
+				// Add before context lines
+				for j := lineNum - beforeAfter; j < lineNum; j++ {
+					if j > 0 && j <= len(lines) {
+						line.Before = append(line.Before, types.SearchContentLine{
+							LineNumber: j,
+							Content:    lines[j-1], // -1 because line numbers are 1-based, but array is 0-based
+						})
+					}
+				}
+
+				// Add after context lines
+				for j := lineNum + 1; j <= lineNum+beforeAfter; j++ {
+					if j <= len(lines) {
+						line.After = append(line.After, types.SearchContentLine{
+							LineNumber: j,
+							Content:    lines[j-1], // -1 because line numbers are 1-based, but array is 0-based
+						})
+					}
+				}
+			}
 		}
 
 		return fileMatch, nil

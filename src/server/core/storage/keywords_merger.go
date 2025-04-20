@@ -206,7 +206,7 @@ func mergeKeywordsIndex(m Merging) Merging {
 			if lastWorkspaceId != workspaceid {
 				lastWorkspaceId = workspaceid
 			} else {
-				if doccount > 512 {
+				if doccount > MaxKeywordIndexSize/2 {
 					m.TotalRowsBefore += len(current.Rows)
 					m.TotalRowsAfter += len(current.Rows)
 					// Already well batched

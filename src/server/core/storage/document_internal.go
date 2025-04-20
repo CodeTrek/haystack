@@ -200,14 +200,26 @@ func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw st
 	keys := []string{}
 	docids := map[string]struct{}{}
 	db.Scan(EncodeKeywordIndexKeyPrefix(workspaceid, kw), func(key, value []byte) bool {
-		keys = append(keys, string(key))
+		changed := false
+		tmpids := []string{}
+
 		ids := DecodeKeywordIndexValue(string(value))
 		for _, id := range ids {
 			if _, ok := removings[id]; ok {
 				// remove the document from the keyword index
+				changed = true
 				continue
 			}
-			docids[id] = struct{}{}
+			if id != "" {
+				tmpids = append(tmpids, id)
+			}
+		}
+
+		if changed || len(tmpids) < MaxKeywordIndexSize/2 {
+			keys = append(keys, string(key))
+			for _, id := range tmpids {
+				docids[id] = struct{}{}
+			}
 		}
 		return true
 	})
@@ -223,8 +235,14 @@ func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw st
 			delete(docids, id)
 		}
 
+		var key string
+		if len(keys) > 0 {
+			key = keys[0]
+			keys = keys[1:]
+		}
+
 		// writeKeywordIndexCached(workspaceid, kw, docs)
-		writeKeywordIndex(batch, workspaceid, kw, docs, nil)
+		writeKeywordIndex(batch, workspaceid, kw, docs, []byte(key))
 		count++
 	}
 

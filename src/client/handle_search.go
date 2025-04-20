@@ -53,6 +53,7 @@ func handleSearch(args []string) {
 			MaxResults:        *maxResults,
 			MaxResultsPerFile: *maxResultsPerFile,
 		},
+		BeforeAfter: 1,
 	}
 
 	// Add filters if specified

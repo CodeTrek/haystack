@@ -29,6 +29,7 @@ type SearchContentRequest struct {
 	CaseSensitive bool           `json:"case_sensitive,omitempty"`
 	Filters       *SearchFilters `json:"filters,omitempty"`
 	Limit         *SearchLimit   `json:"limit,omitempty"`
+	BeforeAfter   int            `json:"before_after,omitempty"`
 }
 
 type SearchFilesRequest struct {
