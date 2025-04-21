@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"encoding/json"
 	"haystack/conf"
 	"os"
@@ -21,13 +20,11 @@ func TestWorkspaceStorage(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = Init(shutdown)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer CloseAndWait()
-	defer cancel()
 
 	// Test saving a workspace
 	workspaceID := "test-workspace"
@@ -91,14 +88,12 @@ func TestGetIncreasedWorkspaceID(t *testing.T) {
 	// Set configuration
 	conf.Get().Global.DataPath = tempDir
 
-	shutdown, cancel := context.WithCancel(context.Background())
 	// Initialize storage
-	err = Init(shutdown)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer CloseAndWait()
-	defer cancel()
 
 	// Test getting increased workspace ID
 	ids := make(map[string]bool)

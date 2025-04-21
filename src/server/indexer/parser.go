@@ -17,8 +17,8 @@ import (
 
 // ParseFile represents a file to be parsed
 type ParseFile struct {
-	Workspace *workspace.Workspace
-	FilePath  string
+	Workspace   *workspace.Workspace
+	RelFilePath string
 }
 
 // Parser handles concurrent file parsing operations
@@ -92,14 +92,14 @@ func (p *Parser) processFile(file ParseFile) error {
 // Add queues a file for parsing
 func (p *Parser) Add(workspace *workspace.Workspace, relPath string) {
 	p.ch <- ParseFile{
-		Workspace: workspace,
-		FilePath:  relPath,
+		Workspace:   workspace,
+		RelFilePath: relPath,
 	}
 }
 
 // parse reads and processes a file, returning a Document
 func parse(file ParseFile) (*storage.Document, bool, error) {
-	fullPath := filepath.Join(file.Workspace.Path, file.FilePath)
+	fullPath := filepath.Join(file.Workspace.Path, file.RelFilePath)
 	id := GetDocumentId(fullPath)
 
 	info, err := os.Stat(fullPath)
@@ -109,7 +109,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	fileSizeExceedLimit := info.Size() > conf.Get().Server.MaxFileSize
 	if fileSizeExceedLimit {
-		log.Printf("File `%s` (%.2f MiB) is too large to index, skipping", file.FilePath, float64(info.Size())/1024/1024)
+		log.Printf("File `%s` (%.2f MiB) is too large to index, skipping", file.RelFilePath, float64(info.Size())/1024/1024)
 	}
 
 	existing, _ := storage.GetDocument(file.Workspace.ID, id, false)
@@ -130,7 +130,7 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 			return nil, false, fmt.Errorf("failed to read file: %w", err)
 		}
 		if !IsLikelyText(content) {
-			log.Printf("File `%s` is not a text file, skipping", file.FilePath)
+			log.Printf("File `%s` is not a text file, skipping", file.RelFilePath)
 			return nil, false, nil
 		}
 
@@ -146,14 +146,13 @@ func parse(file ParseFile) (*storage.Document, bool, error) {
 
 	return &storage.Document{
 		ID:           id,
-		RelPath:      file.FilePath,
-		FullPath:     fullPath,
+		RelPath:      file.RelFilePath,
 		Size:         info.Size(),
 		ModifiedTime: info.ModTime().UnixNano(),
 		LastSyncTime: time.Now().UnixNano(),
 		Hash:         hash,
 		Words:        words,
-		PathWords:    parseString(file.FilePath),
+		PathWords:    parseString(file.RelFilePath),
 	}, existing == nil, nil
 }
 

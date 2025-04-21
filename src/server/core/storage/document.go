@@ -3,7 +3,6 @@ package storage
 type Document struct {
 	ID           string `json:"-"`
 	RelPath      string `json:"rel_path"`
-	FullPath     string `json:"full_path"`
 	Size         int64  `json:"size"`
 	Hash         string `json:"hash"`
 	ModifiedTime int64  `json:"modified_time"`

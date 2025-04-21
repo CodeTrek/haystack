@@ -15,7 +15,7 @@ const StorageVersion = "1.0"
 const Shards = 8
 
 var (
-	db             *pebble.DB
+	db             pebble.DB
 	closeOnce      *sync.Once
 	writeQueue     chan WriteTask
 	closeStorage   context.CancelFunc
@@ -46,7 +46,7 @@ func (c *closeWriteQueue) Wait() {
 	<-c.done
 }
 
-func Init(_ context.Context) error {
+func Init() error {
 	var ctxCloseDB context.Context
 	ctxCloseDB, closeStorage = context.WithCancel(context.Background())
 	closeOnce = &sync.Once{}

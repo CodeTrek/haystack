@@ -15,7 +15,7 @@ type BatchWrite interface {
 	Commit() error
 }
 
-func NewBatchWrite(db *pebble.DB) BatchWrite {
+var NewBatchWrite = func(db pebble.DB) BatchWrite {
 	batch := db.Batch()
 	if batch == nil {
 		return nil
@@ -28,7 +28,7 @@ func NewBatchWrite(db *pebble.DB) BatchWrite {
 }
 
 type BatchWriteImpl struct {
-	batch *pebble.Batch
+	batch pebble.Batch
 	count atomic.Int32
 }
 

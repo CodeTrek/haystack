@@ -3,6 +3,8 @@
 ## [1.2.2]
 - Text file auto detection
 - Add builtin exclude ext list
+- Add Line before and after in search result
+- Add more unittests
 
 ## [1.2.1]
 - Merge inverted index

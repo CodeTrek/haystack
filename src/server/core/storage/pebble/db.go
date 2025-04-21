@@ -13,7 +13,19 @@ import (
 )
 
 // DB represents a Pebble database instance
-type DB struct {
+type DB interface {
+	ScheduleCompact()
+	Close() error
+	IsClosed() bool
+	Put(key, value []byte) error
+	Get(key []byte) ([]byte, error)
+	Delete(key []byte) error
+	Batch() Batch
+	Scan(prefix []byte, cb func(key, value []byte) bool) error
+	ScanRange(begin []byte, end []byte, cb func(key, value []byte) bool) error
+}
+
+type PebbleDB struct {
 	path   string
 	db     *pebble.DB
 	closed atomic.Bool
@@ -21,7 +33,7 @@ type DB struct {
 }
 
 // OpenDB opens a Pebble database at the specified path
-func OpenDB(path string) (*DB, error) {
+func OpenDB(path string) (DB, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path: %v", err)
@@ -63,7 +75,7 @@ func OpenDB(path string) (*DB, error) {
 	}
 
 	// Create a new DB instance
-	pdb := &DB{
+	pdb := &PebbleDB{
 		path:   absPath,
 		db:     db,
 		closed: atomic.Bool{},
@@ -73,7 +85,7 @@ func OpenDB(path string) (*DB, error) {
 	return pdb, nil
 }
 
-func (d *DB) ScheduleCompact() {
+func (d *PebbleDB) ScheduleCompact() {
 	go func() {
 		start := time.Now()
 		log.Println("Compacting database...")
@@ -83,7 +95,7 @@ func (d *DB) ScheduleCompact() {
 }
 
 // Close closes the database
-func (d *DB) Close() error {
+func (d *PebbleDB) Close() error {
 	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
@@ -99,12 +111,12 @@ func (d *DB) Close() error {
 	return nil
 }
 
-func (d *DB) IsClosed() bool {
+func (d *PebbleDB) IsClosed() bool {
 	return d.closed.Load()
 }
 
 // Put stores a key-value pair
-func (d *DB) Put(key, value []byte) error {
+func (d *PebbleDB) Put(key, value []byte) error {
 	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
@@ -117,7 +129,7 @@ func (d *DB) Put(key, value []byte) error {
 }
 
 // Get retrieves the value for a key
-func (d *DB) Get(key []byte) ([]byte, error) {
+func (d *PebbleDB) Get(key []byte) ([]byte, error) {
 	if d.IsClosed() {
 		return nil, fmt.Errorf("database is closed")
 	}
@@ -137,7 +149,7 @@ func (d *DB) Get(key []byte) ([]byte, error) {
 }
 
 // Delete removes a key-value pair
-func (d *DB) Delete(key []byte) error {
+func (d *PebbleDB) Delete(key []byte) error {
 	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
@@ -150,8 +162,8 @@ func (d *DB) Delete(key []byte) error {
 }
 
 // Batch performs multiple operations in a single atomic batch
-func (d *DB) Batch() *Batch {
-	return &Batch{
+func (d *PebbleDB) Batch() Batch {
+	return &PebbleBatch{
 		db:    d,
 		batch: d.db.NewBatch(),
 	}
@@ -161,7 +173,7 @@ func (d *DB) Batch() *Batch {
 // key and value will INVALIDATE after the callback
 // so make sure to copy them if you need to use them later
 // The callback should return true to continue scanning or false to stop
-func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
+func (d *PebbleDB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}
@@ -199,7 +211,7 @@ func (d *DB) Scan(prefix []byte, cb func(key, value []byte) bool) error {
 // key and value will INVALIDATE after the callback
 // so make sure to copy them if you need to use them later
 // The callback should return true to continue scanning or false to stop
-func (d *DB) ScanRange(begin []byte, end []byte, cb func(key, value []byte) bool) error {
+func (d *PebbleDB) ScanRange(begin []byte, end []byte, cb func(key, value []byte) bool) error {
 	if d.IsClosed() {
 		return fmt.Errorf("database is closed")
 	}

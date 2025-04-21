@@ -125,7 +125,7 @@ func (m *mergeKeywordTask) Run() {
 		return
 	}
 	m.merging.WaitingForFlushCache = false
-	m.done <- mergeKeywordsIndex(m.merging)
+	m.done <- mergeKeywordsIndex(m.merging, MaxKeywordIndexSize)
 }
 
 func (m *mergeKeywordTask) Wait() Merging {
@@ -145,9 +145,9 @@ type InvertedIndex struct {
 	DocCount    int
 }
 
-func rewriteIndex(batch BatchWrite, index *InvertedIndex) int {
+var rewriteIndex = func(batch BatchWrite, index *InvertedIndex, maxKeywordIndexSize int) int {
 	if len(index.Rows) < 2 ||
-		index.DocCount/len(index.Rows) > MaxKeywordIndexSize {
+		index.DocCount/len(index.Rows) > maxKeywordIndexSize {
 		// We've already have a well batched keyword
 		// so we don't need to merge it
 		return len(index.Rows)
@@ -160,7 +160,7 @@ func rewriteIndex(batch BatchWrite, index *InvertedIndex) int {
 	remainingDocCount := index.DocCount
 	for len(rows) > 1 {
 		docids := map[string]struct{}{}
-		for len(rows) > 0 && (len(docids) < MaxKeywordIndexSize /* docs batched */ || remainingDocCount < MaxKeywordIndexSize/5 /* docs left */) {
+		for len(rows) > 0 && (len(docids) < maxKeywordIndexSize /* docs batched */ || remainingDocCount < max(maxKeywordIndexSize/5, 4) /* docs left */) {
 			row := rows[0]
 			rows = rows[1:]
 			remainingDocCount -= row.DocCount
@@ -183,7 +183,7 @@ func rewriteIndex(batch BatchWrite, index *InvertedIndex) int {
 	return mergedCount
 }
 
-func mergeKeywordsIndex(m Merging) Merging {
+func mergeKeywordsIndex(m Merging, maxKeywordIndexSize int) Merging {
 	now := time.Now()
 	var isTimeout = func() bool {
 		return time.Since(now) > 300*time.Millisecond
@@ -201,12 +201,13 @@ func mergeKeywordsIndex(m Merging) Merging {
 			if lastWorkspaceId == "" {
 				lastWorkspaceId = workspaceid
 				current.Keyword = keyword
+				current.WorkspaceId = workspaceid
 			}
 
 			if lastWorkspaceId != workspaceid {
 				lastWorkspaceId = workspaceid
 			} else {
-				if doccount > 512 {
+				if doccount > maxKeywordIndexSize/2 {
 					m.TotalRowsBefore += len(current.Rows)
 					m.TotalRowsAfter += len(current.Rows)
 					// Already well batched
@@ -257,7 +258,7 @@ func mergeKeywordsIndex(m Merging) Merging {
 
 		for _, c := range pending {
 			m.TotalRowsBefore += len(c.Rows)
-			m.TotalRowsAfter += rewriteIndex(batch, c)
+			m.TotalRowsAfter += rewriteIndex(batch, c, maxKeywordIndexSize)
 			m.TotalKeywords++
 		}
 		pending = []*InvertedIndex{}
