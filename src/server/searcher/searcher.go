@@ -80,22 +80,23 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 
 	// Check if the file should be included in the search
 	var wantFile = func(doc *storage.Document) bool {
-		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(doc.FullPath), pathFilter) {
+		fullPath := filepath.Join(workspace.Path, doc.RelPath)
+		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(fullPath), pathFilter) {
 			return false
 		}
 
 		// File not included by workspace filters
-		if globalInclude != nil && !globalInclude.Match(doc.FullPath, false) {
+		if globalInclude != nil && !globalInclude.Match(fullPath, false) {
 			return false
 		}
 
 		// Excluded by filter
-		if excludeFilter != nil && excludeFilter.Match(doc.FullPath, false) {
+		if excludeFilter != nil && excludeFilter.Match(fullPath, false) {
 			return false
 		}
 
 		// Not included by include filter
-		if includeFilter != nil && !includeFilter.Match(doc.FullPath, false) {
+		if includeFilter != nil && !includeFilter.Match(fullPath, false) {
 			return false
 		}
 
@@ -121,16 +122,17 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	}
 
 	// Match the content of the file line by line
-	var matchFileContent = func(relPath string, doc *storage.Document) (types.SearchContentResult, error) {
+	var matchFileContent = func(doc *storage.Document) (types.SearchContentResult, error) {
+		fullPath := filepath.Join(workspace.Path, doc.RelPath)
 		fileMatch := types.SearchContentResult{
-			File:  filepath.Clean(relPath),
+			File:  filepath.Clean(doc.RelPath),
 			Lines: []types.LineMatch{},
 		}
 
 		// Read file and match line by line
-		file, err := os.Open(doc.FullPath)
+		file, err := os.Open(fullPath)
 		if err != nil {
-			log.Println("Failed to open file:", doc.FullPath, ", error:", err)
+			log.Printf("Failed to open file:`%s`, error:%s", fullPath, err)
 			return fileMatch, err
 		}
 		defer file.Close()
@@ -223,12 +225,12 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 		}
 
 		// File has been removed, skip it
-		removed, relPath, err := indexer.RefreshFileIfNeeded(workspace, doc)
+		removed, err := indexer.RefreshFileIfNeeded(workspace, doc)
 		if err != nil || removed {
 			continue
 		}
 
-		fileMatch, err := matchFileContent(relPath, doc)
+		fileMatch, err := matchFileContent(doc)
 		if err != nil {
 			continue
 		}

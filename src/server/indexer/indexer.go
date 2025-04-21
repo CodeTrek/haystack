@@ -123,7 +123,7 @@ func RefreshFilesIfNeeded(workspaceId string, docs map[string]*storage.Document)
 
 	removedDocs := []string{}
 	for _, doc := range docs {
-		removed, _, err := RefreshFileIfNeeded(workspace, doc)
+		removed, err := RefreshFileIfNeeded(workspace, doc)
 		if err != nil {
 			continue
 		}
@@ -137,23 +137,20 @@ func RefreshFilesIfNeeded(workspaceId string, docs map[string]*storage.Document)
 	return removedDocs
 }
 
-func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *storage.Document) (removed bool, relPath string, err error) {
-	relPath, err = filepath.Rel(workspace.Path, doc.FullPath)
-	if err != nil {
-		return false, "", err
-	}
+func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *storage.Document) (removed bool, err error) {
+	fullPath := filepath.Join(workspace.Path, doc.RelPath)
 
-	stat, err := os.Stat(doc.FullPath)
+	stat, err := os.Stat(fullPath)
 	// If the file becomes a directory or there is an error, remove it
 	if err != nil || stat.IsDir() {
-		RemoveFile(workspace, relPath)
-		return true, relPath, nil
+		RemoveFile(workspace, doc.RelPath)
+		return true, nil
 	}
 
 	// If the file has been modified, add it to the parser queue
 	if stat.ModTime().UnixNano() != doc.ModifiedTime {
-		parser.Add(workspace, relPath)
+		parser.Add(workspace, doc.RelPath)
 	}
 
-	return false, relPath, nil
+	return false, nil
 }

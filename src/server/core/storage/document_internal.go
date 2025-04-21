@@ -416,7 +416,7 @@ func (t *deleteDocumentTask) Run() {
 		return
 	}
 
-	defer log.Println("Document '", doc.RelPath, "' deleted from workspace '", t.WorkspaceID, "'")
+	defer log.Printf("Document `%s` deleted from workspace `%s`", doc.RelPath, t.WorkspaceID)
 
 	removeKeywordsFromDocumentCached(t.WorkspaceID, t.DocId, doc.Words)
 	/*
