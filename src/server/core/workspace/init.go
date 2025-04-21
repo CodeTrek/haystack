@@ -19,7 +19,7 @@ var (
 	workspaces     map[string]*Workspace
 	workspacePaths map[string]*Workspace
 
-	mutex sync.Mutex
+	mutex sync.RWMutex
 )
 
 func Init() error {
@@ -54,8 +54,8 @@ func Init() error {
 }
 
 func GetAllPaths() []string {
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	result := []string{}
 	for _, workspace := range workspaces {
@@ -66,16 +66,16 @@ func GetAllPaths() []string {
 }
 
 func GetAll() []types.Workspace {
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	result := []types.Workspace{}
 	for _, workspace := range workspaces {
-		workspace.mutex.Lock()
+		indexing := workspace.GetIndexingStatus()
 
 		totalFiles := workspace.TotalFiles
-		if totalFiles == 0 && workspace.indexingStatus != nil {
-			totalFiles = workspace.indexingStatus.TotalFiles
+		if totalFiles == 0 && indexing != nil {
+			totalFiles = indexing.TotalFiles
 		}
 
 		result = append(result, types.Workspace{
@@ -89,8 +89,6 @@ func GetAll() []types.Workspace {
 			LastFullSync:     workspace.LastFullSync,
 			Indexing:         workspace.indexingStatus != nil,
 		})
-
-		workspace.mutex.Unlock()
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -105,8 +103,8 @@ func GetAll() []types.Workspace {
 func GetByPath(path string) (*Workspace, error) {
 	path = utils.NormalizePath(path)
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 	if workspace, ok := workspacePaths[path]; ok {
 		return workspace, nil
 	}
@@ -115,8 +113,8 @@ func GetByPath(path string) (*Workspace, error) {
 }
 
 func Get(workspaceId string) (*Workspace, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	workspace, ok := workspaces[workspaceId]
 	if !ok || workspace.deleted {
