@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"haystack/server/core/storage"
@@ -23,7 +22,7 @@ var (
 	mutex sync.Mutex
 )
 
-func Init(shutdown context.Context, wg *sync.WaitGroup) error {
+func Init() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -51,12 +50,6 @@ func Init(shutdown context.Context, wg *sync.WaitGroup) error {
 		}
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-shutdown.Done()
-		log.Println("Workspace shutdown.")
-	}()
 	return nil
 }
 

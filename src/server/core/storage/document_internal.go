@@ -35,7 +35,7 @@ type flushPendingWritesTask struct {
 func (t *flushPendingWritesTask) Run() {
 	// Flush pending writes to the database
 	flushPendingWrites(t.closing)
-	flushPendingDeletes(t.closing)
+	flushPendingDeletes(t.closing, MaxKeywordIndexSize)
 }
 
 func getPendingWrite(workspaceid string) *WorkspacePendingWrite {
@@ -121,7 +121,7 @@ func getPendingDelete(workspaceid string) *WorkspacePendingWrite {
 	return wp
 }
 
-func flushPendingDeletes(closing bool) {
+func flushPendingDeletes(closing bool, maxKeywordIndexSize int) {
 	if !closing && time.Since(lastFlushDeleteTime) < 1*time.Second {
 		return
 	}
@@ -144,7 +144,7 @@ func flushPendingDeletes(closing bool) {
 				continue
 			}
 
-			removeDocumentsFromKeywordIndex(batch, wp.WorkspaceID, kw, relatedDocs.DocIds)
+			removeDocumentsFromKeywordIndex(batch, wp.WorkspaceID, kw, relatedDocs.DocIds, maxKeywordIndexSize)
 			delete(wp.Keywords, kw)
 
 			// delete empty workspace
@@ -157,7 +157,7 @@ func flushPendingDeletes(closing bool) {
 	batch.Commit()
 }
 
-func removeKeywordsFromDocumentCached(workspaceid string, docid string, keywords []string) {
+var removeKeywordsFromDocumentCached = func(workspaceid string, docid string, keywords []string) {
 	w := getPendingDelete(workspaceid)
 	for _, kw := range keywords {
 		// Add to delete cache to merge with other documents and flush later
@@ -169,7 +169,7 @@ func removeKeywordsFromDocumentCached(workspaceid string, docid string, keywords
 }
 
 // writeKeywordIndex writes a keyword to the database
-func writeKeywordIndex(batch BatchWrite, workspaceid string, kw string, docids []string, key []byte) {
+var writeKeywordIndex = func(batch BatchWrite, workspaceid string, kw string, docids []string, key []byte) {
 	content := EncodeKeywordIndexValue(docids)
 	if len(key) == 0 {
 		key = EncodeKeywordIndexKey(workspaceid, kw, len(docids))
@@ -179,7 +179,8 @@ func writeKeywordIndex(batch BatchWrite, workspaceid string, kw string, docids [
 
 // removeDocumentsFromKeywordIndex removes a document from the keywords index
 // It will remove the document from the keywords index and rewrite the keyword with new docids
-func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw string, removingDocids []string) {
+func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw string, removingDocids []string,
+	maxKeywordIndexSize int) {
 	if len(kw) == 0 {
 		log.Println("Warning: removing document from keywords index, but keyword is empty")
 		return
@@ -215,7 +216,7 @@ func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw st
 			}
 		}
 
-		if changed || len(tmpids) < MaxKeywordIndexSize/2 {
+		if changed || len(tmpids) < maxKeywordIndexSize/2 {
 			keys = append(keys, string(key))
 			for _, id := range tmpids {
 				docids[id] = struct{}{}
@@ -228,7 +229,7 @@ func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw st
 	for len(docids) > 0 {
 		docs := []string{}
 		for id := range docids {
-			if len(docs) >= MaxKeywordIndexSize {
+			if len(docs) >= maxKeywordIndexSize {
 				break
 			}
 			docs = append(docs, id)

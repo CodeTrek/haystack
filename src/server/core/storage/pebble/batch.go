@@ -8,14 +8,24 @@ import (
 )
 
 // Batch represents a batch of operations
-type Batch struct {
-	db    *DB
+type Batch interface {
+	Put(key, value []byte) error
+	Delete(key []byte) error
+	DeleteRange(start, end []byte) error
+	DeletePrefix(prefix []byte) error
+	Commit() error
+	Reset()
+	Close() error
+}
+
+type PebbleBatch struct {
+	db    *PebbleDB
 	batch *pebble.Batch
 	mu    sync.Mutex
 }
 
 // Put adds a key-value pair to the batch
-func (b *Batch) Put(key, value []byte) error {
+func (b *PebbleBatch) Put(key, value []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -26,7 +36,7 @@ func (b *Batch) Put(key, value []byte) error {
 }
 
 // Delete adds a delete operation to the batch
-func (b *Batch) Delete(key []byte) error {
+func (b *PebbleBatch) Delete(key []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -37,7 +47,7 @@ func (b *Batch) Delete(key []byte) error {
 }
 
 // DeleteRange deletes a range of keys in the batch
-func (b *Batch) DeleteRange(start, end []byte) error {
+func (b *PebbleBatch) DeleteRange(start, end []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -48,12 +58,12 @@ func (b *Batch) DeleteRange(start, end []byte) error {
 }
 
 // DeletePrefix deletes all keys with the given prefix in the batch
-func (b *Batch) DeletePrefix(prefix []byte) error {
+func (b *PebbleBatch) DeletePrefix(prefix []byte) error {
 	return b.DeleteRange(prefix, append(prefix, 0xFF))
 }
 
 // Commit commits the batch to the database
-func (b *Batch) Commit() error {
+func (b *PebbleBatch) Commit() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -64,7 +74,7 @@ func (b *Batch) Commit() error {
 }
 
 // Reset resets the batch for reuse
-func (b *Batch) Reset() {
+func (b *PebbleBatch) Reset() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -72,7 +82,7 @@ func (b *Batch) Reset() {
 }
 
 // Close closes the batch
-func (b *Batch) Close() error {
+func (b *PebbleBatch) Close() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "haystack-search": {
+      "type": "sse",
+      "url": "http://localhost:13135/mcp/sse"
+    }
+  }
+}

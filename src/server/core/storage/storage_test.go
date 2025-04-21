@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"haystack/conf"
 	"os"
 	"path/filepath"
@@ -21,8 +20,7 @@ func TestInit(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Test initialization
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = Init(shutdown)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -48,7 +46,6 @@ func TestInit(t *testing.T) {
 		t.Error("Database was not initialized")
 	}
 
-	cancel()
 	// Cleanup
 	CloseAndWait()
 }
@@ -65,8 +62,7 @@ func TestCloseAndWait(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = Init(shutdown)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -74,7 +70,6 @@ func TestCloseAndWait(t *testing.T) {
 	// Test closing
 	done := make(chan struct{})
 	go func() {
-		cancel()
 		CloseAndWait()
 		close(done)
 	}()
@@ -105,13 +100,11 @@ func TestCloseAndWaitMultipleCalls(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = Init(shutdown)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 
-	cancel()
 	// Call CloseAndWait multiple times
 	for i := 0; i < 3; i++ {
 		CloseAndWait()

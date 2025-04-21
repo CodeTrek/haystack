@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"context"
 	"encoding/json"
 	"haystack/conf"
 	"haystack/server/core/storage"
@@ -24,13 +23,11 @@ func TestInit(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = storage.Init(shutdown)
+	err = storage.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
-	defer cancel()
 
 	// Create test workspace data
 	workspaceData := map[string]interface{}{
@@ -48,8 +45,7 @@ func TestInit(t *testing.T) {
 	storage.SaveWorkspace("test-workspace", string(workspaceJSON))
 
 	// Initialize workspace manager
-	var wg sync.WaitGroup
-	err = Init(shutdown, &wg)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -76,17 +72,14 @@ func TestWorkspaceManagement(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = storage.Init(shutdown)
+	err = storage.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
-	defer cancel()
 
 	// Initialize workspace manager
-	var wg sync.WaitGroup
-	err = Init(shutdown, &wg)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
@@ -171,17 +164,14 @@ func TestWorkspaceConcurrency(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	shutdown, cancel := context.WithCancel(context.Background())
-	err = storage.Init(shutdown)
+	err = storage.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
 	defer storage.CloseAndWait()
-	defer cancel()
 
 	// Initialize workspace manager
-	var wg sync.WaitGroup
-	err = Init(shutdown, &wg)
+	err = Init()
 	if err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
