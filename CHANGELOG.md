@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.2.3]
+- Bugfix: MCP SSE connection lost after a while
+
 ## [1.2.2]
 - Text file auto detection
 - Add builtin exclude ext list

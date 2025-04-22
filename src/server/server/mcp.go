@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -44,6 +45,41 @@ func mcpInit() {
 		server.WithBasePath("/mcp"))
 
 	http.HandleFunc("/mcp/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/mcp/sse") {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+				return
+			}
+
+			notify := r.Context().Done()
+			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						log.Printf("Recovered from panic: %v", err)
+						return
+					}
+				}()
+
+				ticker := time.NewTicker(10 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-notify:
+						log.Println("MCP Client disconnected.")
+						return
+					case <-ticker.C:
+						fmt.Fprintf(w, "data: {}\n\n")
+						flusher.Flush()
+					}
+				}
+			}()
+		}
+
 		sse.ServeHTTP(w, r)
 		log.Printf("MCP request: %s %s", r.Method, r.URL.Path)
 	})
@@ -185,8 +221,9 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 	for _, result := range results {
 		printLine(tr, "")
 		printLine(tr, fmt.Sprintf("File: %s, %d result%s", result.File, len(result.Lines), toTruncated(result.Truncate)))
-		printLine(tr, strings.Repeat("-", 20))
+		printLine(tr, strings.Repeat("=", 20))
 		for _, line := range result.Lines {
+			printLine(tr, strings.Repeat("-", 20))
 			for _, before := range line.Before {
 				printLine(tr, fmt.Sprintf("Line %d: %s", before.LineNumber, before.Content))
 			}
