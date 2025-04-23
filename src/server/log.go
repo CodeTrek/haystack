@@ -1,10 +1,11 @@
 package server
 
 import (
-	"haystack/conf"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/codetrek/haystack/conf"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )

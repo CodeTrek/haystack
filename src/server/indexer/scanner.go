@@ -3,14 +3,15 @@ package indexer
 import (
 	"container/list"
 	"fmt"
-	"haystack/server/core/workspace"
-	"haystack/shared/running"
-	"haystack/utils"
-	fsutils "haystack/utils/fs"
-	gitutils "haystack/utils/git"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/utils"
+	fsutils "github.com/codetrek/haystack/utils/fs"
+	gitutils "github.com/codetrek/haystack/utils/git"
 )
 
 type GitIgnoreFilter struct {

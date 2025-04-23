@@ -2,12 +2,13 @@ package server
 
 import (
 	"encoding/json"
-	"haystack/conf"
-	"haystack/shared/running"
-	"haystack/shared/types"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 // handleHealth handles the health check endpoint

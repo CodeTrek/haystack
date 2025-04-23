@@ -1,11 +1,12 @@
 package indexer
 
 import (
-	"haystack/server/core/storage"
-	"haystack/server/core/workspace"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/workspace"
 )
 
 type WriteDoc struct {

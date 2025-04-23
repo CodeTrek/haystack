@@ -2,13 +2,14 @@ package searcher
 
 import (
 	"errors"
-	"haystack/conf"
-	"haystack/server/core/storage"
-	"haystack/server/core/workspace"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/workspace"
 )
 
 var rePrefix = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]+`)

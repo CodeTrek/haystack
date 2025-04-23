@@ -2,13 +2,14 @@ package workspace
 
 import (
 	"encoding/json"
-	"haystack/conf"
-	"haystack/server/core/storage"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage"
 )
 
 func TestInit(t *testing.T) {

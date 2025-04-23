@@ -3,12 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"haystack/server/core/workspace"
-	"haystack/server/indexer"
-	"haystack/shared/types"
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/server/indexer"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func handleCreateWorkspace(w http.ResponseWriter, r *http.Request) {

@@ -1,11 +1,12 @@
 package storage
 
 import (
-	"haystack/conf"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
 )
 
 func TestInit(t *testing.T) {

@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"haystack/conf"
-	"haystack/shared/types"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 type result struct {

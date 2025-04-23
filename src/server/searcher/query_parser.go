@@ -1,7 +1,7 @@
 package searcher
 
 import (
-	"haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/storage"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"

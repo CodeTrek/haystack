@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
-	"haystack/shared/running"
 	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/codetrek/haystack/shared/running"
 )
 
 // StartServer initializes and starts the HTTP server

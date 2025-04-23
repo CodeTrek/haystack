@@ -2,10 +2,11 @@ package storage
 
 import (
 	"encoding/json"
-	"haystack/conf"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
 )
 
 func TestWorkspaceStorage(t *testing.T) {
