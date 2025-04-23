@@ -2,13 +2,14 @@ package storage
 
 import (
 	"context"
-	"haystack/conf"
-	"haystack/server/core/storage/pebble"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage/pebble"
 )
 
 const StorageVersion = "1.0"

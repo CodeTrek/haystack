@@ -2,16 +2,17 @@ package server
 
 import (
 	"fmt"
-	"haystack/conf"
-	"haystack/server/core/storage"
-	"haystack/server/core/workspace"
-	"haystack/server/indexer"
-	"haystack/server/searcher"
-	"haystack/server/server"
-	"haystack/shared/running"
 	"log"
 	"strings"
 	"sync"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/server/indexer"
+	"github.com/codetrek/haystack/server/searcher"
+	"github.com/codetrek/haystack/server/server"
+	"github.com/codetrek/haystack/shared/running"
 )
 
 func Run() {

@@ -2,11 +2,12 @@ package running
 
 import (
 	"flag"
-	"haystack/utils"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/codetrek/haystack/utils"
 )
 
 var (

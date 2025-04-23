@@ -2,14 +2,15 @@ package indexer
 
 import (
 	"fmt"
-	"haystack/server/core/storage"
-	"haystack/server/core/workspace"
-	"haystack/shared/running"
-	"haystack/shared/types"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 var (

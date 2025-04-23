@@ -3,9 +3,10 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"haystack/shared/running"
-	"haystack/shared/types"
 	"path/filepath"
+
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func handleWorkspace(args []string) {

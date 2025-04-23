@@ -2,11 +2,12 @@ package server
 
 import (
 	"encoding/json"
-	"haystack/server/core/workspace"
-	"haystack/server/indexer"
-	"haystack/shared/types"
 	"log"
 	"net/http"
+
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/server/indexer"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {

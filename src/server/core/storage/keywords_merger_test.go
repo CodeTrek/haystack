@@ -2,9 +2,10 @@ package storage
 
 import (
 	"fmt"
-	"haystack/server/core/storage/pebble"
 	"testing"
 	"time"
+
+	"github.com/codetrek/haystack/server/core/storage/pebble"
 )
 
 // mockBatchWrite implements BatchWrite interface for testing

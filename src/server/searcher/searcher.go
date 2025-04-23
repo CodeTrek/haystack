@@ -2,13 +2,6 @@ package searcher
 
 import (
 	"bufio"
-	"haystack/conf"
-	"haystack/server/core/storage"
-	"haystack/server/core/workspace"
-	"haystack/server/indexer"
-	"haystack/shared/running"
-	"haystack/shared/types"
-	"haystack/utils"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,6 +9,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/workspace"
+	"github.com/codetrek/haystack/server/indexer"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
+	"github.com/codetrek/haystack/utils"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )

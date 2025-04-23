@@ -3,11 +3,12 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
-	"haystack/conf"
-	"haystack/server/core/storage"
-	"haystack/shared/types"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 type IndexingStatus struct {

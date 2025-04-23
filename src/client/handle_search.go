@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"haystack/conf"
-	"haystack/shared/running"
-	"haystack/shared/types"
 	"strings"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func handleSearch(args []string) {

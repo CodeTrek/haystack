@@ -186,12 +186,11 @@ github.com/rogpeppe/go-internal/fmtsort
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-github.com/stretchr/testify/require
 # github.com/yosida95/uritemplate/v3 v3.0.2
 ## explicit; go 1.14
 github.com/yosida95/uritemplate/v3
-# golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
-## explicit; go 1.20
+# golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
+## explicit; go 1.23.0
 golang.org/x/exp/constraints
 golang.org/x/exp/rand
 # golang.org/x/net v0.39.0

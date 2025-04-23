@@ -3,9 +3,6 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
-	"haystack/server/core/storage"
-	"haystack/shared/types"
-	"haystack/utils"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,6 +10,10 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/shared/types"
+	"github.com/codetrek/haystack/utils"
 )
 
 var (

@@ -1,13 +1,14 @@
 package conf
 
 import (
-	"haystack/shared/running"
-	"haystack/shared/types"
-	fsutils "haystack/utils/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
+	fsutils "github.com/codetrek/haystack/utils/fs"
 
 	"gopkg.in/yaml.v3"
 )

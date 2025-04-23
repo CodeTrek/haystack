@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"haystack/conf"
 	"os"
 	"testing"
+
+	"github.com/codetrek/haystack/conf"
 )
 
 func setupTestEnvironment(t *testing.T) (string, func()) {

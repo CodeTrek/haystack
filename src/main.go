@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"haystack/client"
-	"haystack/conf"
-	"haystack/server"
-	"haystack/shared/running"
 	"log"
 	_ "net/http/pprof"
 	"path/filepath"
+
+	"github.com/codetrek/haystack/client"
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server"
+	"github.com/codetrek/haystack/shared/running"
 )
 
 var version = "dev"

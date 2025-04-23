@@ -3,11 +3,12 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"haystack/conf"
-	"haystack/server"
-	"haystack/shared/running"
-	"haystack/shared/types"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/server"
+	"github.com/codetrek/haystack/shared/running"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func handleServer(args []string) {

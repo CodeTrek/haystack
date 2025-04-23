@@ -1,13 +1,14 @@
 package workspace
 
 import (
-	"haystack/conf"
-	"haystack/shared/types"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/codetrek/haystack/conf"
+	"github.com/codetrek/haystack/shared/types"
 )
 
 func TestWorkspaceMethods(t *testing.T) {
