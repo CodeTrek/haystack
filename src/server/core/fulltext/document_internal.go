@@ -1,9 +1,11 @@
-package storage
+package fulltext
 
 import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/codetrek/haystack/server/core/pebble"
 )
 
 const MaxKeywordIndexSize = 1000
@@ -65,7 +67,7 @@ func flushPendingWrites(closing bool) {
 		}()
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 
 	wordsCount := 0
 	docsCount := 0
@@ -134,7 +136,7 @@ func flushPendingDeletes(closing bool, maxKeywordIndexSize int) {
 		}()
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 
 	for _, wp := range pendingDeletes {
 		for kw, relatedDocs := range wp.Keywords {
@@ -169,7 +171,7 @@ var removeKeywordsFromDocumentCached = func(workspaceid string, docid string, ke
 }
 
 // writeKeywordIndex writes a keyword to the database
-var writeKeywordIndex = func(batch BatchWrite, workspaceid string, kw string, docids []string, key []byte) {
+var writeKeywordIndex = func(batch pebble.Batch, workspaceid string, kw string, docids []string, key []byte) {
 	content := EncodeKeywordIndexValue(docids)
 	if len(key) == 0 {
 		key = EncodeKeywordIndexKey(workspaceid, kw, len(docids))
@@ -179,7 +181,7 @@ var writeKeywordIndex = func(batch BatchWrite, workspaceid string, kw string, do
 
 // removeDocumentsFromKeywordIndex removes a document from the keywords index
 // It will remove the document from the keywords index and rewrite the keyword with new docids
-func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw string, removingDocids []string,
+func removeDocumentsFromKeywordIndex(batch pebble.Batch, workspaceid string, kw string, removingDocids []string,
 	maxKeywordIndexSize int) {
 	if len(kw) == 0 {
 		log.Println("Warning: removing document from keywords index, but keyword is empty")
@@ -253,7 +255,7 @@ func removeDocumentsFromKeywordIndex(batch BatchWrite, workspaceid string, kw st
 }
 
 // saveDocument saves a document to the database
-func saveDocument(batch BatchWrite, workspaceid string, doc *Document) {
+func saveDocument(batch pebble.Batch, workspaceid string, doc *Document) {
 	doc.LastSyncTime = time.Now().UnixNano()
 	meta, err := EncodeDocumentMetaValue(doc)
 	if err != nil {
@@ -284,7 +286,7 @@ func (t *saveNewDocumentsTask) Run() {
 		return
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 
 	for _, doc := range t.Docs {
 		saveDocument(batch, t.WorkspaceID, doc)
@@ -318,7 +320,7 @@ func (t *updateDocumentsTask) Run() {
 		return
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 
 	for _, updatedDoc := range t.Docs {
 		// Convert the updated document words to a map for faster lookup
@@ -402,7 +404,7 @@ func (t *deleteDocumentTask) Run() {
 		return
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 
 	doc, err := GetDocument(t.WorkspaceID, t.DocId, true)
 	if err != nil {

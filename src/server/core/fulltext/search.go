@@ -1,4 +1,4 @@
-package storage
+package fulltext
 
 type KeywordResult struct {
 	Keyword string              `json:"-"`

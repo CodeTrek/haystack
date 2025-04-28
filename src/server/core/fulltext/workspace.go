@@ -1,4 +1,4 @@
-package storage
+package fulltext
 
 import (
 	"strconv"
@@ -88,7 +88,7 @@ type deleteWorkspaceTask struct {
 }
 
 func (t *deleteWorkspaceTask) Run() {
-	batch := db.Batch()
+	batch := db.NewBatch(0)
 	batch.Delete(EncodeWorkspaceKey(t.WorkspaceID))
 	batch.DeletePrefix(EncodeDocumentMetaKey(t.WorkspaceID, ""))
 	batch.DeletePrefix(EncodeDocumentWordsKey(t.WorkspaceID, ""))

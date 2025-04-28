@@ -2,7 +2,7 @@ package pebble
 
 import (
 	"fmt"
-	"sync"
+	"sync/atomic"
 
 	"github.com/cockroachdb/pebble"
 )
@@ -21,73 +21,79 @@ type Batch interface {
 type PebbleBatch struct {
 	db    *PebbleDB
 	batch *pebble.Batch
-	mu    sync.Mutex
+
+	// maxBatchSize is the maximum number of operations in the batch, count is the number of operations in the batch
+	// The batch will be committed silently when the count reaches maxBatchSize, and a new batch will be created
+	maxBatchSize int32
+	count        atomic.Int32
 }
 
 // Put adds a key-value pair to the batch
 func (b *PebbleBatch) Put(key, value []byte) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	if err := b.batch.Set(key, value, nil); err != nil {
-		return fmt.Errorf("failed to put data in batch: %v", err)
+		return err
 	}
-	return nil
+
+	return b.increaseAndTryCommit()
 }
 
 // Delete adds a delete operation to the batch
 func (b *PebbleBatch) Delete(key []byte) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	if err := b.batch.Delete(key, nil); err != nil {
-		return fmt.Errorf("failed to delete data in batch: %v", err)
+		return err
 	}
-	return nil
+
+	return b.increaseAndTryCommit()
 }
 
 // DeleteRange deletes a range of keys in the batch
 func (b *PebbleBatch) DeleteRange(start, end []byte) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	if err := b.batch.DeleteRange(start, end, nil); err != nil {
-		return fmt.Errorf("failed to delete range in batch: %v", err)
+		return err
 	}
-	return nil
+
+	return b.increaseAndTryCommit()
 }
 
 // DeletePrefix deletes all keys with the given prefix in the batch
 func (b *PebbleBatch) DeletePrefix(prefix []byte) error {
-	return b.DeleteRange(prefix, append(prefix, 0xFF))
+	if err := b.DeleteRange(prefix, append(prefix, 0xFF)); err != nil {
+		return err
+	}
+
+	return b.increaseAndTryCommit()
 }
 
 // Commit commits the batch to the database
 func (b *PebbleBatch) Commit() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if err := b.batch.Commit(pebble.Sync); err != nil {
-		return fmt.Errorf("failed to commit batch: %v", err)
-	}
-	return nil
+	b.count.Store(0)
+	return b.batch.Commit(pebble.Sync)
 }
 
 // Reset resets the batch for reuse
 func (b *PebbleBatch) Reset() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
+	b.count.Store(0)
 	b.batch.Reset()
 }
 
 // Close closes the batch
 func (b *PebbleBatch) Close() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	return b.batch.Close()
+}
 
-	if err := b.batch.Close(); err != nil {
-		return fmt.Errorf("failed to close batch: %v", err)
+func (b *PebbleBatch) increaseAndTryCommit() error {
+	if b.maxBatchSize <= 0 {
+		return nil
 	}
+
+	b.count.Add(1)
+	if b.count.Load() >= b.maxBatchSize {
+		err := b.Commit()
+		if err != nil {
+			return fmt.Errorf("failed to commit batch: %v", err)
+		}
+		b.Reset()
+	}
+
 	return nil
 }

@@ -1,11 +1,11 @@
-package storage
+package fulltext
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/codetrek/haystack/server/core/storage/pebble"
+	"github.com/codetrek/haystack/server/core/pebble"
 )
 
 // mockBatchWrite implements BatchWrite interface for testing
@@ -41,7 +41,7 @@ func (m *mockBatchWrite) DeletePrefix(prefix []byte) error {
 func setupTestMocks() func() {
 	// Override the writeKeywordIndex function for testing
 	originalWriteKeywordIndex := writeKeywordIndex
-	writeKeywordIndex = func(batch BatchWrite, workspaceID, keyword string, docIDs []string, data []byte) {
+	writeKeywordIndex = func(batch pebble.Batch, workspaceID, keyword string, docIDs []string, data []byte) {
 		mockBatch := batch.(*mockBatchWrite)
 		mockBatch.workspaceIDs = append(mockBatch.workspaceIDs, workspaceID)
 		mockBatch.keywords = append(mockBatch.keywords, keyword)
@@ -269,7 +269,7 @@ func (m *mockDB) Close() error {
 	return nil
 }
 
-func (d *mockDB) Batch() pebble.Batch {
+func (d *mockDB) NewBatch(int32) pebble.Batch {
 	if d.batch != nil {
 		return d.batch()
 	}
@@ -344,7 +344,7 @@ func TestMergeKeywordsIndexSingleWorkspace(t *testing.T) {
 
 	batch := newMockBatch(nil)
 	// Mock only the writeKeywordIndex function
-	writeKeywordIndex = func(batch BatchWrite, workspaceID, keyword string, docIDs []string, data []byte) {
+	writeKeywordIndex = func(batch pebble.Batch, workspaceID, keyword string, docIDs []string, data []byte) {
 		writtenWorkspaces = append(writtenWorkspaces, workspaceID)
 		writtenKeywords = append(writtenKeywords, keyword)
 		writtenDocIDs = append(writtenDocIDs, docIDs)
@@ -454,9 +454,9 @@ func TestMergeKeywordsIndexMultipleWorkspaces(t *testing.T) {
 
 	// Create mock batch
 	mockBatch := &struct {
-		BatchWrite
+		pebble.Batch
 	}{
-		BatchWrite: &mockBatchWriteWithFuncs{
+		Batch: &mockBatchWriteWithFuncs{
 			deleteFunc: func(key []byte) error {
 				deletedKeys = append(deletedKeys, string(key))
 				return nil
@@ -471,14 +471,14 @@ func TestMergeKeywordsIndexMultipleWorkspaces(t *testing.T) {
 	}
 
 	// Mock only the writeKeywordIndex function
-	writeKeywordIndex = func(batch BatchWrite, workspaceID, keyword string, docIDs []string, data []byte) {
+	writeKeywordIndex = func(batch pebble.Batch, workspaceID, keyword string, docIDs []string, data []byte) {
 		if _, ok := writtenData[workspaceID]; !ok {
 			writtenData[workspaceID] = make(map[string][]string)
 		}
 		writtenData[workspaceID][keyword] = docIDs
 	}
 
-	NewBatchWrite = func(db pebble.DB) BatchWrite {
+	NewBatch = func(db pebble.DB) pebble.Batch {
 		return mockBatch
 	}
 
@@ -633,6 +633,20 @@ func (m *mockBatchWriteWithFuncs) Commit() error {
 	return nil
 }
 
+func (m *mockBatchWriteWithFuncs) Reset() {}
+
+func (m *mockBatchWriteWithFuncs) Close() error {
+	return nil
+}
+
+func (m *mockBatchWriteWithFuncs) DeleteRange(start, end []byte) error {
+	return nil
+}
+
+func (m *mockBatchWriteWithFuncs) DeletePrefix(prefix []byte) error {
+	return nil
+}
+
 // TestMergeKeywordsIndexTimeout tests the timeout behavior of mergeKeywordsIndex
 func TestMergeKeywordsIndexTimeout(t *testing.T) {
 	// Save original functions
@@ -676,11 +690,11 @@ func TestMergeKeywordsIndexTimeout(t *testing.T) {
 	}
 
 	// Mock only the writeKeywordIndex function
-	writeKeywordIndex = func(batch BatchWrite, workspaceID, keyword string, docIDs []string, data []byte) {
+	writeKeywordIndex = func(batch pebble.Batch, workspaceID, keyword string, docIDs []string, data []byte) {
 		// No-op for this test
 	}
 
-	NewBatchWrite = func(db pebble.DB) BatchWrite {
+	NewBatch = func(db pebble.DB) pebble.Batch {
 		return &mockBatchWriteWithFuncs{
 			deleteFunc: func(key []byte) error { return nil },
 			putFunc:    func(key, value []byte) error { return nil },

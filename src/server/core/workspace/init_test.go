@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 )
 
 func TestInit(t *testing.T) {
@@ -24,11 +24,11 @@ func TestInit(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	err = storage.Init()
+	err = fulltext.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
-	defer storage.CloseAndWait()
+	defer fulltext.CloseAndWait()
 
 	// Create test workspace data
 	workspaceData := map[string]interface{}{
@@ -43,7 +43,7 @@ func TestInit(t *testing.T) {
 	}
 
 	// Save workspace
-	storage.SaveWorkspace("test-workspace", string(workspaceJSON))
+	fulltext.SaveWorkspace("test-workspace", string(workspaceJSON))
 
 	// Initialize workspace manager
 	err = Init()
@@ -73,11 +73,11 @@ func TestWorkspaceManagement(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	err = storage.Init()
+	err = fulltext.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
-	defer storage.CloseAndWait()
+	defer fulltext.CloseAndWait()
 
 	// Initialize workspace manager
 	err = Init()
@@ -165,11 +165,11 @@ func TestWorkspaceConcurrency(t *testing.T) {
 	conf.Get().Global.DataPath = tempDir
 
 	// Initialize storage
-	err = storage.Init()
+	err = fulltext.Init()
 	if err != nil {
 		t.Fatalf("Storage Init failed: %v", err)
 	}
-	defer storage.CloseAndWait()
+	defer fulltext.CloseAndWait()
 
 	// Initialize workspace manager
 	err = Init()

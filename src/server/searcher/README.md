@@ -71,7 +71,7 @@ The document collection uses a two-phase filtering approach:
 
 1. **Phase 1: Index Lookup**
    ```go
-   func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) storage.SearchResult {
+   func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) fulltext.SearchResult {
        // 1. Use prefix to lookup documents in index
        // 2. Return initial document set
    }
@@ -83,7 +83,7 @@ The document collection uses a two-phase filtering approach:
 
 2. **Phase 2: Document Merging**
    ```go
-   func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
+   func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string) (*fulltext.SearchResult, error) {
        // 1. Collect documents for each term
        // 2. Merge results using AND/OR logic
    }

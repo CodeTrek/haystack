@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/server/core/workspace"
 	"github.com/codetrek/haystack/server/indexer"
 	"github.com/codetrek/haystack/server/searcher"
@@ -31,7 +31,7 @@ func Run() {
 	wg := &sync.WaitGroup{}
 	running.InitShutdown(wg)
 
-	if err := storage.Init(); err != nil {
+	if err := fulltext.Init(); err != nil {
 		log.Fatal("Error initializing storage:", err)
 		running.Shutdown()
 		return
@@ -53,7 +53,7 @@ func Run() {
 	server.StartServer(wg, fmt.Sprintf("127.0.0.1:%d", conf.Get().Global.Port))
 
 	wg.Wait()
-	storage.CloseAndWait()
+	fulltext.CloseAndWait()
 
 	log.Println("Haystack server stopped")
 }

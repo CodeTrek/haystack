@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/shared/types"
 	"github.com/codetrek/haystack/utils"
 )
@@ -29,7 +29,7 @@ func Init() error {
 
 	workspaces = make(map[string]*Workspace)
 	workspacePaths = make(map[string]*Workspace)
-	allWorkspaces, err := storage.GetAllWorkspaces()
+	allWorkspaces, err := fulltext.GetAllWorkspaces()
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func Create(workspacePath string) (*Workspace, error) {
 	var id string
 	// Try 10 times to generate a unique workspace id
 	for range 10 {
-		id, err = storage.GetIncreasedWorkspaceID()
+		id, err = fulltext.GetIncreasedWorkspaceID()
 		if err != nil {
 			return nil, err
 		}
@@ -202,6 +202,6 @@ func Delete(workspaceId string) error {
 	delete(workspaces, workspaceId)
 	delete(workspacePaths, workspace.Path)
 
-	storage.DeleteWorkspace(workspaceId)
+	fulltext.DeleteWorkspace(workspaceId)
 	return nil
 }

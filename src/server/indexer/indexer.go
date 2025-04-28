@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/server/core/workspace"
 	"github.com/codetrek/haystack/shared/running"
 	"github.com/codetrek/haystack/shared/types"
@@ -76,7 +76,7 @@ func Sync(workspace *workspace.Workspace) error {
 func AddOrSyncFile(workspace *workspace.Workspace, relPath string) error {
 	fullPath := filepath.Join(workspace.Path, relPath)
 	docid := GetDocumentId(fullPath)
-	doc, err := storage.GetDocument(workspace.ID, docid, false)
+	doc, err := fulltext.GetDocument(workspace.ID, docid, false)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func RemoveFile(workspace *workspace.Workspace, relPath string) error {
 	fullPath := filepath.Join(workspace.Path, relPath)
 
 	docid := GetDocumentId(fullPath)
-	if err := storage.DeleteDocument(workspace.ID, docid); err != nil {
+	if err := fulltext.DeleteDocument(workspace.ID, docid); err != nil {
 		return err
 	}
 
@@ -116,7 +116,7 @@ func RemoveFile(workspace *workspace.Workspace, relPath string) error {
 	return nil
 }
 
-func RefreshFilesIfNeeded(workspaceId string, docs map[string]*storage.Document) []string {
+func RefreshFilesIfNeeded(workspaceId string, docs map[string]*fulltext.Document) []string {
 	workspace, err := workspace.Get(workspaceId)
 	if err != nil {
 		return []string{}
@@ -138,7 +138,7 @@ func RefreshFilesIfNeeded(workspaceId string, docs map[string]*storage.Document)
 	return removedDocs
 }
 
-func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *storage.Document) (removed bool, err error) {
+func RefreshFileIfNeeded(workspace *workspace.Workspace, doc *fulltext.Document) (removed bool, err error) {
 	fullPath := filepath.Join(workspace.Path, doc.RelPath)
 
 	stat, err := os.Stat(fullPath)
