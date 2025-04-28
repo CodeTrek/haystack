@@ -1,5 +1,8 @@
 # Changelog
 
+## [next]
+- Bugfix: Wrong position of HaystackSearch file seperation line
+
 ## [1.2.3]
 - Bugfix: MCP SSE connection lost after a while
 
