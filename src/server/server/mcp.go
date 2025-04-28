@@ -221,8 +221,8 @@ func handleSearch(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 
 	for _, result := range results {
 		printLine(tr, "")
-		printLine(tr, fmt.Sprintf("File: %s, %d result%s", result.File, len(result.Lines), toTruncated(result.Truncate)))
 		printLine(tr, strings.Repeat("=", 20))
+		printLine(tr, fmt.Sprintf("File: %s, %d result%s", result.File, len(result.Lines), toTruncated(result.Truncate)))
 		for _, line := range result.Lines {
 			printLine(tr, strings.Repeat("-", 20))
 			for _, before := range line.Before {
