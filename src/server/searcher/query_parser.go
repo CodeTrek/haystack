@@ -1,10 +1,9 @@
 package searcher
 
 import (
-	"github.com/codetrek/haystack/server/core/storage"
-
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/codetrek/haystack/server/core/fulltext"
 )
 
 // Query represents the complete search query
@@ -83,20 +82,20 @@ func processQuery(q *Query) {
 // SearchFiles searches the files in the workspace
 // input is the search result from the previous query
 // returns the search result for the current query
-func (q *Query) SearchFiles() (*storage.SearchResult, error) {
-	result := &storage.SearchResult{}
+func (q *Query) SearchFiles() (*fulltext.SearchResult, error) {
+	result := &fulltext.SearchResult{}
 	return q.Expression.SearchFiles(result)
 }
 
-func (o *OrExpression) SearchFiles(input *storage.SearchResult) (*storage.SearchResult, error) {
+func (o *OrExpression) SearchFiles(input *fulltext.SearchResult) (*fulltext.SearchResult, error) {
 	return input, nil
 }
 
-func (a *AndExpression) SearchFiles(input *storage.SearchResult) *storage.SearchResult {
+func (a *AndExpression) SearchFiles(input *fulltext.SearchResult) *fulltext.SearchResult {
 	return nil
 }
 
-func (t *Term) SearchFiles(input *storage.SearchResult) *storage.SearchResult {
+func (t *Term) SearchFiles(input *fulltext.SearchResult) *fulltext.SearchResult {
 	return nil
 }
 

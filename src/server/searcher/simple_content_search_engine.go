@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/server/core/workspace"
 )
 
@@ -29,8 +29,8 @@ type SimpleContentSearchEngineTerm struct {
 	Prefix  string
 }
 
-func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, error) {
-	rs := []*storage.SearchResult{}
+func (q *SimpleContentSearchEngine) CollectDocuments() (*fulltext.SearchResult, error) {
+	rs := []*fulltext.SearchResult{}
 	// Collect the documents for each or clause
 	for _, orClause := range q.OrClauses {
 		r, err := orClause.CollectDocuments(q.Workspace.ID)
@@ -42,7 +42,7 @@ func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, e
 	}
 
 	if len(rs) == 0 {
-		return &storage.SearchResult{}, nil
+		return &fulltext.SearchResult{}, nil
 	}
 
 	// Merge the results, we use the first result as the base and merge all other results into it
@@ -60,16 +60,16 @@ func (q *SimpleContentSearchEngine) CollectDocuments() (*storage.SearchResult, e
 	return result, nil
 }
 
-func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string) (*storage.SearchResult, error) {
+func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string) (*fulltext.SearchResult, error) {
 	// Collect the documents for each term
-	rs := []*storage.SearchResult{}
+	rs := []*fulltext.SearchResult{}
 	for _, term := range q.AndTerms {
 		r := term.CollectDocuments(workspaceId)
 		rs = append(rs, &r)
 	}
 
 	if len(rs) == 0 {
-		return &storage.SearchResult{
+		return &fulltext.SearchResult{
 			DocIds: make(map[string]struct{}),
 		}, nil
 	}
@@ -92,8 +92,8 @@ func (q *SimpleContentSearchEngineAndClause) CollectDocuments(workspaceId string
 	return result, nil
 }
 
-func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) storage.SearchResult {
-	r := storage.Search(workspaceId, q.Prefix, -1)
+func (q *SimpleContentSearchEngineTerm) CollectDocuments(workspaceId string) fulltext.SearchResult {
+	r := fulltext.Search(workspaceId, q.Prefix, -1)
 	log.Printf("CollectDocuments: |--`%s` found %d documents", q.String(), len(r.DocIds))
 	return r
 }

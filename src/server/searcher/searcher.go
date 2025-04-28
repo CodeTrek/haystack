@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/server/core/workspace"
 	"github.com/codetrek/haystack/server/indexer"
 	"github.com/codetrek/haystack/shared/running"
@@ -80,7 +80,7 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	}
 
 	// Check if the file should be included in the search
-	var wantFile = func(doc *storage.Document) bool {
+	var wantFile = func(doc *fulltext.Document) bool {
 		fullPath := filepath.Join(workspace.Path, doc.RelPath)
 		if len(pathFilter) > 0 && !strings.HasPrefix(strings.ToLower(fullPath), pathFilter) {
 			return false
@@ -123,7 +123,7 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 	}
 
 	// Match the content of the file line by line
-	var matchFileContent = func(doc *storage.Document) (types.SearchContentResult, error) {
+	var matchFileContent = func(doc *fulltext.Document) (types.SearchContentResult, error) {
 		fullPath := filepath.Join(workspace.Path, doc.RelPath)
 		fileMatch := types.SearchContentResult{
 			File:  filepath.Clean(doc.RelPath),
@@ -215,7 +215,7 @@ func SearchContent(workspace *workspace.Workspace, req *types.SearchContentReque
 			break
 		}
 
-		doc, err := storage.GetDocument(workspace.ID, docid, false)
+		doc, err := fulltext.GetDocument(workspace.ID, docid, false)
 		if err != nil || doc == nil {
 			continue
 		}
@@ -368,7 +368,7 @@ func SearchFiles(workspace *workspace.Workspace, req *types.SearchFilesRequest) 
 
 	pattern := strings.ReplaceAll(req.Query, " ", "")
 	matches := []MatchResult{}
-	storage.ScanFiles(workspace.ID, func(_, relPath string) bool {
+	fulltext.ScanFiles(workspace.ID, func(_, relPath string) bool {
 		if isTimeout() {
 			return false
 		}

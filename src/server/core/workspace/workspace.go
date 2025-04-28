@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage"
+	"github.com/codetrek/haystack/server/core/fulltext"
 	"github.com/codetrek/haystack/shared/types"
 )
 
@@ -101,7 +101,7 @@ func (w *Workspace) Save() error {
 		return err
 	}
 
-	storage.SaveWorkspace(w.ID, string(json))
+	fulltext.SaveWorkspace(w.ID, string(json))
 	return nil
 }
 

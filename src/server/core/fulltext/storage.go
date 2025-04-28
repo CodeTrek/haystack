@@ -1,4 +1,4 @@
-package storage
+package fulltext
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/codetrek/haystack/conf"
-	"github.com/codetrek/haystack/server/core/storage/pebble"
+	"github.com/codetrek/haystack/server/core/pebble"
 )
 
 const StorageVersion = "1.0"

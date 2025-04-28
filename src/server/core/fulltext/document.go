@@ -1,4 +1,4 @@
-package storage
+package fulltext
 
 type Document struct {
 	ID           string `json:"-"`

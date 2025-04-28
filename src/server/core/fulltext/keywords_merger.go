@@ -1,10 +1,11 @@
-package storage
+package fulltext
 
 import (
 	"context"
 	"log"
 	"time"
 
+	"github.com/codetrek/haystack/server/core/pebble"
 	"github.com/dustin/go-humanize"
 )
 
@@ -145,7 +146,7 @@ type InvertedIndex struct {
 	DocCount    int
 }
 
-var rewriteIndex = func(batch BatchWrite, index *InvertedIndex, maxKeywordIndexSize int) int {
+var rewriteIndex = func(batch pebble.Batch, index *InvertedIndex, maxKeywordIndexSize int) int {
 	if len(index.Rows) < 2 ||
 		index.DocCount/len(index.Rows) > maxKeywordIndexSize {
 		// We've already have a well batched keyword
@@ -189,7 +190,7 @@ func mergeKeywordsIndex(m Merging, maxKeywordIndexSize int) Merging {
 		return time.Since(now) > 300*time.Millisecond
 	}
 
-	batch := NewBatchWrite(db)
+	batch := NewBatch(db)
 	lastWorkspaceId := ""
 	current := &InvertedIndex{Rows: []RecordRow{}}
 	nextIter := m.NextIter

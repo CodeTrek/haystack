@@ -20,7 +20,7 @@ type DB interface {
 	Put(key, value []byte) error
 	Get(key []byte) ([]byte, error)
 	Delete(key []byte) error
-	Batch() Batch
+	NewBatch(maxBatchSize int32) Batch
 	Scan(prefix []byte, cb func(key, value []byte) bool) error
 	ScanRange(begin []byte, end []byte, cb func(key, value []byte) bool) error
 }
@@ -162,10 +162,13 @@ func (d *PebbleDB) Delete(key []byte) error {
 }
 
 // Batch performs multiple operations in a single atomic batch
-func (d *PebbleDB) Batch() Batch {
+// maxBatchSize is the maximum number of operations in a single batch, set 0 to disable the limit
+func (d *PebbleDB) NewBatch(maxBatchSize int32) Batch {
 	return &PebbleBatch{
-		db:    d,
-		batch: d.db.NewBatch(),
+		db:           d,
+		batch:        d.db.NewBatch(),
+		maxBatchSize: maxBatchSize,
+		count:        atomic.Int32{},
 	}
 }
 
